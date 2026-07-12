@@ -1,0 +1,6 @@
+{
+  "TextureOptimizer": {
+    "Enabled": false,
+    "RulesPath": "Database\\TextureRules.json"
+  }
+}

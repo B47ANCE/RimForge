@@ -1,0 +1,37 @@
+{
+  "Version": "2.1.0-alpha.5",
+  "RootFolders": [
+    "C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\294100",
+    "C:\\Program Files (x86)\\Steam\\steamapps\\common\\RimWorld\\Mods"
+  ],
+  "OutputFolder": "Output",
+  "LogFolder": "Logs",
+  "CacheFolder": "Cache",
+  "ExternalTimeoutSeconds": 10,
+  "Threads": 0,
+  "Verbose": true,
+  "Performance": {
+    "EnableProfiling": true,
+    "ShowProgress": true,
+    "UseCache": true,
+    "UseRunspaces": false
+  },
+  "Profiles": {
+    "Ignored": [],
+    "Shared": [],
+    "List1Only": [],
+    "List2Only": []
+  },
+  "DatabaseBuilder": {
+    "Enabled": true,
+    "OutputFolder": "Database.Generated"
+  },
+  "TargetRimWorldVersion": "1.6",
+  "DependencyManifest": "Database\\Dependencies.json",
+  "Incremental": {
+    "Enabled": true,
+    "FingerprintSchemaVersion": 1,
+    "TrackTextureFiles": true,
+    "FullVerificationIntervalDays": 7
+  }
+}

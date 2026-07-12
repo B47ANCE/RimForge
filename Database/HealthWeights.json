@@ -1,0 +1,20 @@
+{
+  "SchemaVersion": 1,
+  "Description": "Default scoring weights for a future mod health score.",
+  "Weights": {
+    "NativeVersionSupport": 20,
+    "NoVersionWarningVerified": 15,
+    "WorkshopAvailable": 15,
+    "WorkshopCurrent": 15,
+    "DependenciesSatisfied": 20,
+    "NoDeclaredIncompatibility": 10,
+    "NoLoadOrderViolation": 5
+  },
+  "Penalties": {
+    "UnsupportedOrUnknown": -20,
+    "WorkshopUnavailable": -25,
+    "MissingDependency": -30,
+    "DeclaredIncompatibility": -40,
+    "HardDependencyCycle": -15
+  }
+}

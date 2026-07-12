@@ -1,0 +1,13 @@
+{
+  "SchemaVersion": 1,
+  "DatabaseName": "RimForge Knowledge Database",
+  "TargetRimWorldVersion": "1.6",
+  "Files": {
+    "LoadOrderRules": "LoadOrderRules.json",
+    "CompatibilityRules": "CompatibilityRules.json",
+    "PatchRules": "PatchRules.json",
+    "HealthWeights": "HealthWeights.json",
+    "ModTaxonomy": "ModTaxonomy.json",
+    "TaxonomyRules": "TaxonomyRules.json"
+  }
+}

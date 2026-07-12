@@ -1,0 +1,18 @@
+{
+  "SchemaVersion": 1,
+  "Rules": [
+    {
+      "Id": "example-disabled-rule",
+      "Enabled": false,
+      "PackageIds": [
+        "author.firstmod",
+        "author.secondmod"
+      ],
+      "Severity": "Warning",
+      "Reason": "Replace this example with a verified incompatibility.",
+      "Recommendation": "Remove one mod or install a verified compatibility patch.",
+      "Reference": "",
+      "AppliesToProfiles": []
+    }
+  ]
+}

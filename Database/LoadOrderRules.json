@@ -1,0 +1,66 @@
+{
+  "SchemaVersion": 1,
+  "Description": "Curated load-order knowledge not already expressible through About.xml metadata.",
+  "Rules": [
+    {
+      "Id": "harmony-absolutely-first",
+      "Enabled": true,
+      "PackageId": "brrainz.harmony",
+      "MustLoadAfter": [],
+      "MustLoadBefore": [],
+      "MustBeFirst": true,
+      "MustBeLast": false,
+      "RecommendedNearStart": false,
+      "RecommendedNearEnd": false,
+      "Severity": "Error",
+      "Reason": "Harmony must be the first active mod in the RimWorld load order.",
+      "Reference": "RimWorld Harmony mod load-order requirement",
+      "AppliesToVersions": [
+        "1.6"
+      ],
+      "AppliesToProfiles": []
+    },
+    {
+      "Id": "missile-girl-absolutely-last",
+      "Enabled": true,
+      "PackageId": "vr.missilegirl",
+      "MustLoadAfter": [],
+      "MustLoadBefore": [],
+      "MustBeFirst": false,
+      "MustBeLast": true,
+      "RecommendedNearStart": false,
+      "RecommendedNearEnd": false,
+      "Severity": "Error",
+      "Reason": "Missile Girl must be the last mod in the active list.",
+      "Reference": "Missile Girl author load-order requirement",
+      "AppliesToVersions": [
+        "1.6"
+      ],
+      "AppliesToProfiles": []
+    },
+    {
+      "Id": "rocketman-absolutely-last",
+      "Enabled": true,
+      "PackageId": "krkr.rocketman",
+      "MustLoadAfter": [],
+      "MustLoadBefore": [],
+      "MustBeFirst": false,
+      "MustBeLast": true,
+      "RecommendedNearStart": false,
+      "RecommendedNearEnd": false,
+      "Severity": "Error",
+      "Reason": "RocketMan must be the last mod in the active list.",
+      "Reference": "RocketMan author load-order requirement",
+      "AppliesToVersions": [
+        "1.0",
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5",
+        "1.6"
+      ],
+      "AppliesToProfiles": []
+    }
+  ]
+}

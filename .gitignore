@@ -1,0 +1,41 @@
+# RimForge runtime and generated data
+Output/
+Logs/
+Cache/
+TextureWork/
+Database.Generated/
+Backups/
+Review/ClassificationReview.csv
+
+# Downloaded third-party tools and binaries
+Tools/**/*.exe
+Tools/**/*.dll
+Tools/**/*.zip
+Tools/**/*.7z
+
+# Local configuration overrides
+Config.local.json
+*.user.json
+
+# PowerShell / IDE files
+.vscode/
+.vs/
+.idea/
+*.clixml
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Temporary and backup files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.log
+
+# Release archives
+*.zip
+*.7z

@@ -1,0 +1,44 @@
+name: PowerShell tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate JSON and module contracts
+        shell: powershell
+        run: .\Tests\Smoke-Test.ps1
+
+
+      - name: Test fingerprint service
+        shell: powershell
+        run: .\Tests\FingerprintService-Test.ps1
+
+      - name: Test incremental audit service
+        shell: powershell
+        run: .\Tests\IncrementalAudit-Test.ps1
+
+      - name: Test cache service
+        shell: powershell
+        run: .\Tests\CacheService-Test.ps1
+
+      - name: Test dependency manager
+        shell: powershell
+        run: .\Tests\DependencyManager-Test.ps1
+
+      - name: Test texture geometry
+        shell: powershell
+        run: .\Tests\TextureGeometry-Test.ps1
+
+      - name: Test invalid DDS planning
+        shell: powershell
+        run: .\Tests\InvalidDdsRepair-Test.ps1

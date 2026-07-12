@@ -1,0 +1,381 @@
+{
+  "SchemaVersion": 1,
+  "Description": "Deterministic evidence weights for active RimWorld content only. Generic implementation details such as textures, ordinary PatchOperations, Harmony use, and WorkGivers do not establish a primary classification.",
+  "MinimumPrimaryScore": 7,
+  "MinimumSecondaryScore": 4,
+  "ReviewBelowConfidence": 80,
+  "Categories": [
+    {
+      "Id": "BootstrapFramework",
+      "DisplayName": "Bootstrap / Framework",
+      "Signals": {
+        "XmlDefTypes": {},
+        "XmlClassPatterns": {
+          "(?i)Prepatcher": 7,
+          "(?i)XmlExtensions": 7
+        },
+        "AssemblyPatterns": {
+          "(?i)Prepatcher": 8,
+          "(?i)XmlExtensions": 8
+        },
+        "PathPatterns": {},
+        "DependencyPatterns": {}
+      }
+    },
+    {
+      "Id": "FactionsRaces",
+      "DisplayName": "Factions & Races",
+      "Signals": {
+        "XmlDefTypes": {
+          "FactionDef": 8,
+          "PawnKindDef": 3,
+          "XenotypeDef": 7,
+          "GeneDef": 2
+        },
+        "XmlClassPatterns": {
+          "(?i)AlienRace": 8,
+          "(?i)RaceProperties": 5
+        },
+        "AssemblyPatterns": {
+          "(?i)AlienRace": 6,
+          "(?i)Faction": 2,
+          "(?i)Xenotype": 4
+        },
+        "PathPatterns": {
+          "(?i)(^|[\\\\/])(Factions?|Races?|Xenotypes?)([\\\\/]|$)": 5
+        },
+        "DependencyPatterns": {
+          "(?i)humanoidalienraces": 4
+        }
+      }
+    },
+    {
+      "Id": "WorldGeneration",
+      "DisplayName": "World Generation",
+      "Signals": {
+        "XmlDefTypes": {
+          "BiomeDef": 8,
+          "WorldObjectDef": 5,
+          "WorldGenStepDef": 9,
+          "MapGeneratorDef": 8,
+          "GenStepDef": 7,
+          "TileMutatorDef": 8,
+          "TerrainDef": 2
+        },
+        "XmlClassPatterns": {
+          "(?i)WorldGen": 7,
+          "(?i)GenStep": 6,
+          "(?i)MapGenerator": 6,
+          "(?i)Biome": 4
+        },
+        "AssemblyPatterns": {
+          "(?i)WorldComponent": 5,
+          "(?i)WorldGen": 7,
+          "(?i)GenStep": 6,
+          "(?i)MapGenerator": 6,
+          "(?i)TileMutator": 7
+        },
+        "PathPatterns": {
+          "(?i)(^|[\\\\/])(World|WorldGen|Biomes?|Landforms?|MapGen)([\\\\/]|$)": 5
+        },
+        "DependencyPatterns": {}
+      }
+    },
+    {
+      "Id": "WorldMechanics",
+      "DisplayName": "World Mechanics",
+      "Signals": {
+        "XmlDefTypes": {
+          "WorldObjectDef": 5,
+          "RoadDef": 8,
+          "SitePartDef": 4,
+          "IncidentDef": 2
+        },
+        "XmlClassPatterns": {
+          "(?i)Caravan": 4,
+          "(?i)WorldObject": 3,
+          "(?i)Road": 6
+        },
+        "AssemblyPatterns": {
+          "(?i)Caravan": 4,
+          "(?i)WorldObject": 3,
+          "(?i)WorldPath": 5
+        },
+        "PathPatterns": {
+          "(?i)(^|[\\\\/])(Roads?|Caravans?|WorldObjects?)([\\\\/]|$)": 5
+        },
+        "DependencyPatterns": {}
+      }
+    },
+    {
+      "Id": "MedicalMechanics",
+      "DisplayName": "Medical Mechanics",
+      "Signals": {
+        "XmlDefTypes": {
+          "HediffDef": 1,
+          "BodyPartDef": 1
+        },
+        "XmlClassPatterns": {
+          "(?i)Tend": 6,
+          "(?i)HealthAI": 7,
+          "(?i)Surgery": 6,
+          "(?i)Rescue": 5,
+          "(?i)FirstAid": 8,
+          "(?i)Casevac": 8
+        },
+        "AssemblyPatterns": {
+          "(?i)JobDriver.*Tend": 8,
+          "(?i)WorkGiver.*Doctor": 8,
+          "(?i)HealthAIUtility": 9,
+          "(?i)FirstAid": 9,
+          "(?i)Casevac": 9,
+          "(?i)Rescue": 6,
+          "(?i)Surgery": 6
+        },
+        "PathPatterns": {
+          "(?i)(^|[\\\\/])(Medical|Health|Hediffs?|Surgery)([\\\\/]|$)": 5
+        },
+        "DependencyPatterns": {}
+      }
+    },
+    {
+      "Id": "AIBehavior",
+      "DisplayName": "AI / Behavior",
+      "Signals": {
+        "XmlDefTypes": {
+          "ThinkTreeDef": 9,
+          "DutyDef": 4
+        },
+        "XmlClassPatterns": {
+          "(?i)ThinkNode": 9,
+          "(?i)JobGiver": 9,
+          "(?i)PathFinder": 10,
+          "(?i)ThinkTree": 9
+        },
+        "AssemblyPatterns": {
+          "(?i)ThinkNode": 10,
+          "(?i)JobGiver": 10,
+          "(?i)PathFinder": 10,
+          "(?i)Pawn_PathFollower": 9,
+          "(?i)ThinkTree": 9
+        },
+        "PathPatterns": {
+          "(?i)(^|[\\\\/])(AI|ThinkTrees?|Pathfinding)([\\\\/]|$)": 7
+        },
+        "DependencyPatterns": {}
+      }
+    },
+    {
+      "Id": "CombatMechanics",
+      "DisplayName": "Combat Mechanics",
+      "Signals": {
+        "XmlDefTypes": {
+          "DamageDef": 4,
+          "ArmorCategoryDef": 4,
+          "BodyPartGroupDef": 2
+        },
+        "XmlClassPatterns": {
+          "(?i)Verb_": 4,
+          "(?i)Projectile": 3,
+          "(?i)Melee": 3,
+          "(?i)Ammo": 5,
+          "(?i)Combat": 3
+        },
+        "AssemblyPatterns": {
+          "(?i)Verb_": 4,
+          "(?i)Projectile": 3,
+          "(?i)CombatExtended": 8,
+          "(?i)Melee": 3
+        },
+        "PathPatterns": {
+          "(?i)(^|[\\\\/])(Weapons?|Combat|Ammo|Projectiles?)([\\\\/]|$)": 5
+        },
+        "DependencyPatterns": {
+          "^ceteam\\.combatextended$": 5
+        }
+      }
+    },
+    {
+      "Id": "QuestMechanics",
+      "DisplayName": "Quest / Story Mechanics",
+      "Signals": {
+        "XmlDefTypes": {
+          "QuestScriptDef": 8,
+          "QuestNodeDef": 8,
+          "IncidentDef": 3
+        },
+        "XmlClassPatterns": {
+          "(?i)QuestNode": 8,
+          "(?i)QuestPart": 7,
+          "(?i)IncidentWorker": 4
+        },
+        "AssemblyPatterns": {
+          "(?i)QuestNode": 8,
+          "(?i)QuestPart": 7,
+          "(?i)IncidentWorker": 4
+        },
+        "PathPatterns": {
+          "(?i)(^|[\\\\/])(Quests?|Incidents?|Storytellers?)([\\\\/]|$)": 6
+        },
+        "DependencyPatterns": {}
+      }
+    },
+    {
+      "Id": "StorageMechanics",
+      "DisplayName": "Storage Mechanics",
+      "Signals": {
+        "XmlDefTypes": {
+          "StorageSettingsPresetDef": 7
+        },
+        "XmlClassPatterns": {
+          "(?i)StorageSettings": 5,
+          "(?i)StoreUtility": 5,
+          "(?i)Shelf": 3
+        },
+        "AssemblyPatterns": {
+          "(?i)StorageSettings": 5,
+          "(?i)StoreUtility": 5,
+          "(?i)AdaptiveStorage": 8
+        },
+        "PathPatterns": {
+          "(?i)(^|[\\\\/])(Storage|Shelves?)([\\\\/]|$)": 6
+        },
+        "DependencyPatterns": {
+          "^adaptive\\.storage\\.framework$": 5
+        }
+      }
+    },
+    {
+      "Id": "PowerMechanics",
+      "DisplayName": "Power Mechanics",
+      "Signals": {
+        "XmlDefTypes": {},
+        "XmlClassPatterns": {
+          "(?i)CompPower": 5,
+          "(?i)PowerNet": 6,
+          "(?i)Battery": 4,
+          "(?i)SolarFlare": 5
+        },
+        "AssemblyPatterns": {
+          "(?i)CompPower": 5,
+          "(?i)PowerNet": 6,
+          "(?i)Battery": 4,
+          "(?i)SolarFlare": 5
+        },
+        "PathPatterns": {
+          "(?i)(^|[\\\\/])(Power|Electricity|Generators?)([\\\\/]|$)": 6
+        },
+        "DependencyPatterns": {}
+      }
+    },
+    {
+      "Id": "BuildingsItems",
+      "DisplayName": "Items / Buildings / Content",
+      "Signals": {
+        "XmlDefTypes": {
+          "ThingDef": 1,
+          "RecipeDef": 1,
+          "ResearchProjectDef": 1
+        },
+        "XmlClassPatterns": {
+          "(?i)Building_": 3
+        },
+        "AssemblyPatterns": {
+          "(?i)Building_": 3,
+          "(?i)ThingComp": 1
+        },
+        "PathPatterns": {
+          "(?i)(^|[\\\\/])(Buildings?|Items?|Furniture|Apparel|Weapons?)([\\\\/]|$)": 4
+        },
+        "DependencyPatterns": {}
+      }
+    },
+    {
+      "Id": "VisualAnimation",
+      "DisplayName": "Visual / Animation",
+      "Signals": {
+        "XmlDefTypes": {},
+        "XmlClassPatterns": {
+          "(?i)PawnRenderer": 8,
+          "(?i)PawnRender": 8,
+          "(?i)Animation": 7
+        },
+        "AssemblyPatterns": {
+          "(?i)PawnRenderer": 9,
+          "(?i)PawnRender": 9,
+          "(?i)Animation": 7
+        },
+        "PathPatterns": {
+          "(?i)(^|[\\\\/])Animations?([\\\\/]|$)": 7,
+          "(?i)(^|[\\\\/])(Hair|Bodies)([\\\\/]|$)": 5
+        },
+        "DependencyPatterns": {}
+      }
+    },
+    {
+      "Id": "InterfaceQoL",
+      "DisplayName": "Interface / Quality of Life",
+      "Signals": {
+        "XmlDefTypes": {
+          "MainButtonDef": 5,
+          "KeyBindingDef": 4
+        },
+        "XmlClassPatterns": {
+          "(?i)MainTabWindow": 6,
+          "(?i)Dialog_": 5,
+          "(?i)ITab": 5,
+          "(?i)Gizmo": 3
+        },
+        "AssemblyPatterns": {
+          "(?i)MainTabWindow": 7,
+          "(?i)Dialog_": 5,
+          "(?i)ITab": 5,
+          "(?i)Gizmo": 3
+        },
+        "PathPatterns": {
+          "(?i)(^|[\\\\/])(UI|Interface|Menus?|Tabs?)([\\\\/]|$)": 5
+        },
+        "DependencyPatterns": {}
+      }
+    },
+    {
+      "Id": "CompatibilityPatch",
+      "DisplayName": "Compatibility Patch",
+      "Signals": {
+        "XmlDefTypes": {},
+        "XmlClassPatterns": {
+          "(?i)^PatchOperationFindMod$": 2
+        },
+        "AssemblyPatterns": {
+          "(?i)CompatibilityPatch": 6
+        },
+        "PathPatterns": {
+          "(?i)(^|[\\\\/])(Compat|Compatibility)([\\\\/]|$)": 4
+        },
+        "DependencyPatterns": {}
+      }
+    },
+    {
+      "Id": "Performance",
+      "DisplayName": "Performance",
+      "Signals": {
+        "XmlDefTypes": {},
+        "XmlClassPatterns": {
+          "(?i)Performance": 5,
+          "(?i)Optimizer": 5
+        },
+        "AssemblyPatterns": {
+          "(?i)Performance": 6,
+          "(?i)Optimizer": 6,
+          "(?i)RocketMan": 10,
+          "(?i)MissileGirl": 10
+        },
+        "PathPatterns": {
+          "(?i)(performance|optimizer|rocketman|missilegirl)": 8
+        },
+        "DependencyPatterns": {}
+      }
+    }
+  ],
+  "ScannerRevision": 2
+}

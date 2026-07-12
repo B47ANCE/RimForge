@@ -1,0 +1,12 @@
+{
+  "SchemaVersion": 1,
+  "Description": "Explicit blueprint section overrides for exceptional mods.",
+  "Overrides": [
+    {
+      "PackageId": "ceteam.combatextended",
+      "BlueprintSection": "major-overhauls",
+      "Reason": "Combat Extended is a broad combat-system overhaul.",
+      "Confidence": "Curated"
+    }
+  ]
+}

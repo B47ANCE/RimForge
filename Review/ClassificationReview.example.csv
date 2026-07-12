@@ -1,0 +1,2 @@
+﻿PackageId,ModName,SuggestedCategory,Confidence,TopEvidence,Decision,ApprovedCategory,ApprovedFamily,ApprovedSeries,ApprovedRoles,ApprovedTags,ReviewerNotes
+example.mod,Example Mod,Gameplay Mechanics,62,Gameplay Mechanics=8 || Interface / Quality of Life=6,Approve,,,,Gameplay,Example;Reviewed,Example row only. Delete before importing.

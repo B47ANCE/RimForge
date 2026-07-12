@@ -1,0 +1,399 @@
+{
+  "SchemaVersion": 1,
+  "Description": "Curated semantic taxonomy for RimWorld mods. Roles describe what a mod is; they do not automatically force load order unless a separate curated rule says so.",
+  "AllowedCategories": [
+    "Bootstrap",
+    "Core",
+    "Framework",
+    "Expansion",
+    "Gameplay",
+    "Content",
+    "Interface",
+    "WorldGeneration",
+    "Storage",
+    "Combat",
+    "Vehicles",
+    "Hospitality",
+    "Performance",
+    "Patch",
+    "Utility",
+    "Unknown"
+  ],
+  "AllowedRoles": [
+    "Bootstrap",
+    "Library",
+    "Framework",
+    "Expansion",
+    "Gameplay",
+    "Content",
+    "Interface",
+    "WorldGeneration",
+    "StorageFramework",
+    "StorageAddon",
+    "CombatFramework",
+    "CombatAddon",
+    "VehicleFramework",
+    "VehicleAddon",
+    "HospitalityFramework",
+    "HospitalityAddon",
+    "PerformanceOptimizer",
+    "TerminalPatcher",
+    "CompatibilityPatch",
+    "Utility"
+  ],
+  "Mods": [
+    {
+      "PackageId": "brrainz.harmony",
+      "DisplayName": "Harmony",
+      "Category": "Bootstrap",
+      "Roles": [
+        "Bootstrap",
+        "Library",
+        "Framework"
+      ],
+      "Tags": [
+        "Harmony",
+        "CoreLibrary"
+      ],
+      "Priority": 1000,
+      "Confidence": "AuthorConfirmed",
+      "Reason": "Runtime patching library and required bootstrap component.",
+      "Reference": "Curated project rule: Harmony must be first.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "ludeon.rimworld",
+      "DisplayName": "RimWorld Core",
+      "Category": "Core",
+      "Roles": [
+        "Expansion"
+      ],
+      "Tags": [
+        "CoreGame"
+      ],
+      "Priority": 900,
+      "Confidence": "System",
+      "Reason": "Base game package.",
+      "Reference": "RimWorld core package ID.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "ludeon.rimworld.biotech",
+      "DisplayName": "Biotech",
+      "Category": "Expansion",
+      "Roles": [
+        "Expansion"
+      ],
+      "Tags": [
+        "DLC",
+        "Biotech"
+      ],
+      "Priority": 850,
+      "Confidence": "System",
+      "Reason": "Official RimWorld expansion.",
+      "Reference": "Official DLC package ID.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "vanillaexpanded.vfecore",
+      "DisplayName": "Vanilla Furniture Expanded",
+      "Category": "Framework",
+      "Roles": [
+        "Framework",
+        "Content"
+      ],
+      "Tags": [
+        "VanillaExpanded"
+      ],
+      "Priority": 700,
+      "Confidence": "Curated",
+      "Reason": "Shared foundation for multiple Vanilla Furniture Expanded modules.",
+      "Reference": "Installed mod metadata and dependency graph.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "oskarpotocki.vanillafactionsexpanded.core",
+      "DisplayName": "Vanilla Expanded Framework",
+      "Category": "Framework",
+      "Roles": [
+        "Framework",
+        "Library"
+      ],
+      "Tags": [
+        "VanillaExpanded",
+        "FactionFramework"
+      ],
+      "Priority": 720,
+      "Confidence": "Curated",
+      "Reason": "Framework used by multiple Vanilla Expanded faction modules.",
+      "Reference": "Installed mod metadata and dependency graph.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "adaptive.storage.framework",
+      "DisplayName": "Adaptive Storage Framework",
+      "Category": "Storage",
+      "Roles": [
+        "Framework",
+        "StorageFramework"
+      ],
+      "Tags": [
+        "Storage"
+      ],
+      "Priority": 700,
+      "Confidence": "Curated",
+      "Reason": "Framework required by adaptive storage add-ons.",
+      "Reference": "Installed mod metadata and dependency graph.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "reel.expanded.storage",
+      "DisplayName": "Expanded Storage",
+      "Category": "Storage",
+      "Roles": [
+        "StorageAddon",
+        "Content"
+      ],
+      "Tags": [
+        "Storage"
+      ],
+      "Priority": 400,
+      "Confidence": "Curated",
+      "Reason": "Storage content mod that depends on storage/framework packages.",
+      "Reference": "Current profile dependency analysis.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "ceteam.combatextended",
+      "DisplayName": "Combat Extended",
+      "Category": "Combat",
+      "Roles": [
+        "Framework",
+        "CombatFramework",
+        "Gameplay"
+      ],
+      "Tags": [
+        "Combat",
+        "TotalConversion"
+      ],
+      "Priority": 650,
+      "Confidence": "Curated",
+      "Reason": "Major combat-system framework used by CE modules and patches.",
+      "Reference": "Installed dependency graph.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "smashphil.vehicleframework",
+      "DisplayName": "Vehicle Framework",
+      "Category": "Vehicles",
+      "Roles": [
+        "Framework",
+        "VehicleFramework"
+      ],
+      "Tags": [
+        "Vehicles"
+      ],
+      "Priority": 650,
+      "Confidence": "Curated",
+      "Reason": "Framework required by vehicle content mods.",
+      "Reference": "Installed dependency graph.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "orion.hospitality",
+      "DisplayName": "Hospitality",
+      "Category": "Hospitality",
+      "Roles": [
+        "Framework",
+        "HospitalityFramework",
+        "Gameplay"
+      ],
+      "Tags": [
+        "Guests",
+        "Hospitality"
+      ],
+      "Priority": 550,
+      "Confidence": "Curated",
+      "Reason": "Gameplay framework extended by Hospitality add-ons.",
+      "Reference": "Installed mod metadata.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "adamas.storefront",
+      "DisplayName": "Storefront",
+      "Category": "Hospitality",
+      "Roles": [
+        "HospitalityAddon",
+        "Gameplay"
+      ],
+      "Tags": [
+        "Guests",
+        "Trading"
+      ],
+      "Priority": 400,
+      "Confidence": "Curated",
+      "Reason": "Hospitality-related gameplay add-on.",
+      "Reference": "Current profile composition.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "orion.gastronomy",
+      "DisplayName": "Gastronomy",
+      "Category": "Hospitality",
+      "Roles": [
+        "HospitalityAddon",
+        "Gameplay"
+      ],
+      "Tags": [
+        "Guests",
+        "Food"
+      ],
+      "Priority": 400,
+      "Confidence": "Curated",
+      "Reason": "Hospitality-related gameplay add-on.",
+      "Reference": "Current profile composition.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "taranchuk.performanceoptimizer",
+      "DisplayName": "Performance Optimizer",
+      "Category": "Performance",
+      "Roles": [
+        "PerformanceOptimizer"
+      ],
+      "Tags": [
+        "Performance"
+      ],
+      "Priority": 100,
+      "Confidence": "Curated",
+      "Reason": "Performance-focused mod; placement should be governed by explicit rules, not taxonomy alone.",
+      "Reference": "Installed mod metadata.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "vr.missilegirl",
+      "DisplayName": "Missile Girl",
+      "Category": "Performance",
+      "Roles": [
+        "TerminalPatcher",
+        "PerformanceOptimizer"
+      ],
+      "Tags": [
+        "Performance",
+        "MustBeLast"
+      ],
+      "Priority": -1000,
+      "Confidence": "AuthorConfirmed",
+      "Reason": "Terminal patcher with a curated absolute-last rule.",
+      "Reference": "Curated project rule.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "krkr.rocketman",
+      "DisplayName": "RocketMan",
+      "Category": "Performance",
+      "Roles": [
+        "TerminalPatcher",
+        "PerformanceOptimizer"
+      ],
+      "Tags": [
+        "Performance",
+        "MustBeLast"
+      ],
+      "Priority": -1000,
+      "Confidence": "AuthorConfirmed",
+      "Reason": "Terminal performance patcher with a curated absolute-last rule.",
+      "Reference": "Curated project rule.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "nozome.mapmodeframework",
+      "DisplayName": "Map Mode Framework",
+      "Category": "WorldGeneration",
+      "Roles": [
+        "Framework",
+        "WorldGeneration"
+      ],
+      "Tags": [
+        "Map",
+        "World"
+      ],
+      "Priority": 600,
+      "Confidence": "Curated",
+      "Reason": "Framework for map-mode functionality.",
+      "Reference": "Installed mod metadata.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "m00nl1ght.mappreview",
+      "DisplayName": "Map Preview",
+      "Category": "WorldGeneration",
+      "Roles": [
+        "WorldGeneration",
+        "Interface"
+      ],
+      "Tags": [
+        "Map",
+        "Preview"
+      ],
+      "Priority": 450,
+      "Confidence": "Curated",
+      "Reason": "Map generation preview utility.",
+      "Reference": "Installed mod metadata.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    },
+    {
+      "PackageId": "seromas.layereddestruction.patches",
+      "DisplayName": "Layered Wall Destruction - Additional Patches",
+      "Category": "Patch",
+      "Roles": [
+        "CompatibilityPatch"
+      ],
+      "Tags": [
+        "Patch",
+        "CycleKnown"
+      ],
+      "Priority": 250,
+      "Confidence": "Curated",
+      "Reason": "Patch collection participating in a known mutual dependency cycle.",
+      "Reference": "Current dependency graph.",
+      "AppliesToVersions": [
+        "1.6"
+      ]
+    }
+  ]
+}

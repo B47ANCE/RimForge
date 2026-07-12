@@ -1,0 +1,20 @@
+{
+  "SchemaVersion": 1,
+  "Dependencies": [
+    {
+      "Id": "texconv",
+      "DisplayName": "Microsoft DirectXTex Texconv",
+      "Required": false,
+      "Capability": "TextureConversion",
+      "ConfiguredPath": "Tools\\DirectXTex\\texconv.exe",
+      "SearchCommand": "texconv.exe",
+      "Architecture": "x64",
+      "Validator": "Texconv",
+      "Installer": {
+        "Type": "Winget",
+        "PackageId": "Microsoft.DirectXTex.Texconv",
+        "Exact": true
+      }
+    }
+  ]
+}

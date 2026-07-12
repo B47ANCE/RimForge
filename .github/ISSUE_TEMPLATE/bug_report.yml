@@ -1,0 +1,36 @@
+name: Bug report
+description: Report reproducible RimForge behavior
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Remove private paths or personal information from logs before attaching them.
+  - type: input
+    id: version
+    attributes:
+      label: RimForge version
+      placeholder: 2.0.0-alpha.3
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant sanitized logs
+      render: shell
