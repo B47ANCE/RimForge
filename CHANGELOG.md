@@ -1,4 +1,12 @@
-# Unreleased — Epic E Pass 2 Transactional Repair Execution
+# Unreleased — Epic E Pass 3 Repair Engine Certification
+
+- Added versioned Repair Engine safety certification with an explicit automatic-action allowlist.
+- Enforced automatic allowlisting, runtime-evidence denial, and destructive/uncertain confirmation at the transaction boundary.
+- Certified all Companion runtime-derived issue classes as advisory-only and non-automatic.
+- Persisted certification policy and safety class in transaction journals and surfaced certification reasons in Repair Preview.
+- Added executable allowlist, confirmation, and runtime-denial coverage; completed Epic E; and advanced the Client to `2.2.0-alpha.76`.
+
+# 2.2.0-alpha.75 — Epic E Pass 2 Transactional Repair Execution
 
 - Added serialized repair transactions with atomically persisted lifecycle journals and complete audit events.
 - Added failure and cancellation rollback, recovery-required outcomes, interrupted-journal discovery, and explicit recovery execution.

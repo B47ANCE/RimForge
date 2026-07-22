@@ -113,7 +113,8 @@ public partial class MainWindow
                 (_, _) => Task.FromResult(new RepairMutationResult(
                     true,
                     "The profile workspace service restored its atomic save backups.")),
-                context.CancellationToken));
+                context.CancellationToken,
+                userConfirmed: true));
 
         LastRepairOutcomeText = $"{execution.State}: {execution.Message} • Transaction {execution.Journal.Id}";
         var severity = execution.Success ? NotificationSeverity.Success
@@ -198,7 +199,8 @@ public partial class MainWindow
         var automatic = IssueItems
             .Where(issue => issue.CanAutoFix && !issue.IsIgnored)
             .Where(issue => BuildRepairPlan(issue) is
-                { CanExecute: true, ExecutionMode: RepairExecutionMode.Automatic })
+                { CanExecute: true, ExecutionMode: RepairExecutionMode.Automatic,
+                  Certification.AutomaticExecutionAllowlisted: true })
             .ToArray();
         if (automatic.Length == 0) return;
 
@@ -218,6 +220,7 @@ public partial class MainWindow
     private static IReadOnlyList<string> BuildRepairPreviewDetails(RepairPlan plan) =>
     [
         $"Confidence: {plan.Confidence} • Safety: {plan.SafetyClass}",
+        $"Certification: {plan.Certification.PolicyId} • {plan.Certification.Reason}",
         $"Evidence: {string.Join("; ", plan.Evidence.Select(item => item.Summary))}",
         .. plan.Preconditions.Select(item => $"Precondition {(item.IsSatisfied ? "ready" : "blocked")}: {item.Target}"),
         .. plan.Steps.Select(step => $"{step.Order}. {step.Action}: {step.TargetName}")

@@ -1092,7 +1092,8 @@ var readyContext = new RepairPlanningContext("Fixture", "C:/fixture/workspace", 
 var readyRepair = repairPlanner.Build(repairIssue, [analysisAlpha, analysisBeta], context: readyContext);
 var repeatedRepair = repairPlanner.Build(repairIssue, [analysisBeta, analysisAlpha], context: readyContext);
 Require(readyRepair.CanExecute && readyRepair.Confidence == RepairConfidence.High &&
-        readyRepair.SafetyClass == RepairSafetyClass.ConfirmationRequired,
+        readyRepair.SafetyClass == RepairSafetyClass.SafeAutomatic &&
+        readyRepair.Certification.AutomaticExecutionAllowlisted,
     "Repair plan did not expose executable confidence and safety classification.");
 Require(readyRepair.Evidence.Count == 2 && readyRepair.Preconditions.All(item => item.IsSatisfied) &&
         !readyRepair.Preview.PerformsWrites && readyRepair.Preview.AffectedPackageIds.Count == 2,
@@ -1107,8 +1108,11 @@ try
     var committedRepair = await transactionExecutor.ExecuteAsync(
         readyRepair,
         _ => Task.FromResult(new RepairMutationResult(true, "Fixture mutation committed.", "fixture.backup")),
-        (_, _) => Task.FromResult(new RepairMutationResult(true, "Fixture rollback completed.")));
+        (_, _) => Task.FromResult(new RepairMutationResult(true, "Fixture rollback completed.")),
+        userConfirmed: true);
     Require(committedRepair.Success && committedRepair.State == RepairTransactionState.Committed &&
+            committedRepair.Journal.CertificationPolicyId == RepairSafetyPolicy.PolicyId &&
+            committedRepair.Journal.SafetyClass == RepairSafetyClass.SafeAutomatic &&
             committedRepair.Journal.AuditTrail.Select(item => item.State).SequenceEqual(
                 [RepairTransactionState.Planned, RepairTransactionState.Executing, RepairTransactionState.Committed]),
         "Repair transaction did not atomically journal its committed lifecycle.");
@@ -1119,7 +1123,8 @@ try
     var rolledBackRepair = await transactionExecutor.ExecuteAsync(
         readyRepair,
         _ => Task.FromResult(new RepairMutationResult(false, "Fixture mutation failed.")),
-        (_, _) => { rollbackCalled = true; return Task.FromResult(new RepairMutationResult(true, "Fixture state restored.")); });
+        (_, _) => { rollbackCalled = true; return Task.FromResult(new RepairMutationResult(true, "Fixture state restored.")); },
+        userConfirmed: true);
     Require(!rolledBackRepair.Success && rollbackCalled && rolledBackRepair.State == RepairTransactionState.RolledBack,
         "Failed repair execution did not invoke rollback and report the restored outcome.");
 
@@ -1128,7 +1133,8 @@ try
         readyRepair,
         cancellationToken => { repairCancellation.Cancel(); cancellationToken.ThrowIfCancellationRequested(); return Task.FromResult(new RepairMutationResult(true, "unreachable")); },
         (_, _) => Task.FromResult(new RepairMutationResult(true, "Cancelled fixture state restored.")),
-        repairCancellation.Token);
+        repairCancellation.Token,
+        userConfirmed: true);
     Require(!cancelledRepair.Success && cancelledRepair.State == RepairTransactionState.Cancelled,
         "Cancelled repair execution did not roll back to a terminal cancelled state.");
 
@@ -1150,6 +1156,64 @@ try
         (_, _) => Task.FromResult(new RepairMutationResult(true, "Interrupted fixture restored.")));
     Require(recovered.State == RepairTransactionState.RolledBack && recovered.Journal.IsTerminal,
         "Interrupted repair recovery did not durably complete rollback.");
+
+    var safetyPolicy = new RepairSafetyPolicy();
+    var destructivePlan = safetyPolicy.Certify(
+        readyRepair with
+        {
+            ExecutionMode = RepairExecutionMode.ManualChoice,
+            IsDestructive = true,
+            RequiresConfirmation = true
+        },
+        repairIssue);
+    Require(destructivePlan.SafetyClass == RepairSafetyClass.Destructive &&
+            destructivePlan.Certification.RequiresExplicitConfirmation &&
+            !destructivePlan.Certification.AutomaticExecutionAllowlisted,
+        "Destructive repair certification did not require explicit confirmation.");
+    await RequireThrowsAsync<InvalidOperationException>(
+        () => transactionExecutor.ExecuteAsync(
+            destructivePlan,
+            _ => Task.FromResult(new RepairMutationResult(true, "must not run")),
+            (_, _) => Task.FromResult(new RepairMutationResult(true, "rollback"))),
+        "Transaction executor accepted a destructive repair without explicit confirmation.");
+    var confirmedDestructive = await transactionExecutor.ExecuteAsync(
+        destructivePlan,
+        _ => Task.FromResult(new RepairMutationResult(true, "Confirmed destructive fixture committed.")),
+        (_, _) => Task.FromResult(new RepairMutationResult(true, "Confirmed fixture rolled back.")),
+        userConfirmed: true);
+    Require(confirmedDestructive.Success && confirmedDestructive.State == RepairTransactionState.Committed,
+        "Explicitly confirmed destructive repair did not cross the certified execution boundary.");
+
+    foreach (var runtimeCode in new[]
+    {
+        AnalysisIssueCode.RuntimeObservedConflict,
+        AnalysisIssueCode.RuntimePerformanceRegression,
+        AnalysisIssueCode.RuntimeIntegrationFailure
+    })
+    {
+        var runtimeIssue = repairIssue with
+        {
+            Id = $"runtime-repair-fixture:{runtimeCode}",
+            Code = runtimeCode,
+            RepairAction = RepairActionKind.InspectMetadata,
+            ResolutionKind = IssueResolutionKind.Assisted,
+            CanAutoFix = false
+        };
+        var runtimePlan = repairPlanner.Build(runtimeIssue, [analysisAlpha, analysisBeta], context: readyContext);
+        Require(runtimePlan.Certification.RuntimeEvidenceAdvisoryOnly &&
+                !runtimePlan.Certification.AutomaticExecutionAllowlisted &&
+                runtimePlan.Status == RepairPlanStatus.Unsupported,
+            $"Companion runtime evidence {runtimeCode} was not certified as advisory-only and non-automatic.");
+    }
+
+    var uncertifiedAutomatic = readyRepair with { Certification = RepairCertification.RestrictiveDefault };
+    await RequireThrowsAsync<InvalidOperationException>(
+        () => transactionExecutor.ExecuteAsync(
+            uncertifiedAutomatic,
+            _ => Task.FromResult(new RepairMutationResult(true, "must not run")),
+            (_, _) => Task.FromResult(new RepairMutationResult(true, "rollback")),
+            userConfirmed: true),
+        "Transaction executor accepted an automatic action absent from the explicit safety allowlist.");
 }
 finally
 {

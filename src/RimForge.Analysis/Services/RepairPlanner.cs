@@ -5,6 +5,11 @@ namespace RimForge.Analysis.Services;
 
 public sealed class RepairPlanner
 {
+    private readonly IRepairSafetyPolicy _safetyPolicy;
+
+    public RepairPlanner(IRepairSafetyPolicy? safetyPolicy = null) =>
+        _safetyPolicy = safetyPolicy ?? new RepairSafetyPolicy();
+
     public RepairPlan Build(
         IssueWorkItem issue,
         IReadOnlyCollection<ModRecord> mods,
@@ -33,7 +38,7 @@ public sealed class RepairPlanner
             RepairActionKind.ReviewCycle => BuildCyclePlan(issue, NameOf, selectedCycleFirstPackageId),
             _ => BuildManualPlan(issue, NameOf),
         };
-        return Enrich(plan, issue, mods, context);
+        return _safetyPolicy.Certify(Enrich(plan, issue, mods, context), issue);
     }
 
     public static RepairPlanningContext CaptureContext(RimForgeProfile? profile)

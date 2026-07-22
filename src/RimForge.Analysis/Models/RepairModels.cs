@@ -67,6 +67,18 @@ public sealed record RepairPlanningContext(
     bool WorkspaceExists,
     bool ModsConfigDirectoryExists);
 
+public sealed record RepairCertification(
+    string PolicyId,
+    bool AutomaticExecutionAllowlisted,
+    bool RequiresExplicitConfirmation,
+    bool RuntimeEvidenceAdvisoryOnly,
+    string Reason)
+{
+    public static RepairCertification RestrictiveDefault { get; } = new(
+        "repair-policy:uncertified", false, true, false,
+        "The repair plan has not passed safety certification.");
+}
+
 public sealed record RepairPlanStep(
     int Order,
     string Action,
@@ -94,6 +106,7 @@ public sealed record RepairPlan(
     public IReadOnlyList<RepairEvidenceReference> Evidence { get; init; } = Array.Empty<RepairEvidenceReference>();
     public IReadOnlyList<RepairPrecondition> Preconditions { get; init; } = Array.Empty<RepairPrecondition>();
     public RepairPreview Preview { get; init; } = new("No changes are available.", Array.Empty<string>(), Array.Empty<string>());
+    public RepairCertification Certification { get; init; } = RepairCertification.RestrictiveDefault;
     public string DeterministicKey { get; init; } = string.Empty;
     public bool PreconditionsSatisfied => Preconditions.All(item => item.IsSatisfied);
     public bool CanExecute => Status == RepairPlanStatus.Ready && PreconditionsSatisfied && SafetyClass != RepairSafetyClass.Unsupported;
@@ -142,6 +155,8 @@ public sealed record RepairTransactionJournal(
     DateTimeOffset UpdatedAt,
     RepairTransactionState State,
     IReadOnlyList<RepairAuditEvent> AuditTrail,
+    string? CertificationPolicyId = null,
+    RepairSafetyClass SafetyClass = RepairSafetyClass.Unsupported,
     string? BackupPath = null,
     string? Outcome = null)
 {

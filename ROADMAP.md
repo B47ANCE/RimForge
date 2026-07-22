@@ -179,7 +179,7 @@ Work follows the product dependency chain: runtime evidence → analysis → pro
 
 - [ ] verify runtime evidence in Inspector and Issue Viewer
 - [ ] verify ForgeView relationship types and provenance
-- [ ] verify Repair Engine never performs an unsafe automatic runtime-evidence repair
+- [x] verify Repair Engine never performs an unsafe automatic runtime-evidence repair
 - [ ] complete performance, soak, recovery, packaging, install/update, and security validation
 - [ ] mark both Companion acceptance checklists complete with release evidence
 
@@ -228,9 +228,9 @@ Work follows the product dependency chain: runtime evidence → analysis → pro
 
 ### Pass 3: repair certification
 
-- [ ] safe automatic actions explicitly allowlisted
-- [ ] destructive or uncertain actions require confirmation
-- [ ] runtime-evidence repair hooks validated by Companion Gate 3
+- [x] safe automatic actions explicitly allowlisted
+- [x] destructive or uncertain actions require confirmation
+- [x] runtime-evidence repair hooks validated by Companion Gate 3
 
 ## Epic F — Productivity
 

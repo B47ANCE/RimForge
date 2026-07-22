@@ -9,7 +9,8 @@ public interface IRepairTransactionExecutor
         RepairPlan plan,
         Func<CancellationToken, Task<RepairMutationResult>> apply,
         Func<RepairTransactionJournal, CancellationToken, Task<RepairMutationResult>> rollback,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        bool userConfirmed = false);
     IReadOnlyList<RepairTransactionJournal> DiscoverInterrupted();
     Task<RepairExecutionResult> RecoverAsync(
         string transactionId,
@@ -31,12 +32,21 @@ public sealed class RepairTransactionExecutor : IRepairTransactionExecutor
         RepairPlan plan,
         Func<CancellationToken, Task<RepairMutationResult>> apply,
         Func<RepairTransactionJournal, CancellationToken, Task<RepairMutationResult>> rollback,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool userConfirmed = false)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(apply);
         ArgumentNullException.ThrowIfNull(rollback);
         if (!plan.CanExecute) throw new InvalidOperationException("Only a ready repair plan with satisfied preconditions can execute.");
+        if (!string.Equals(plan.Certification.PolicyId, RepairSafetyPolicy.PolicyId, StringComparison.Ordinal))
+            throw new InvalidOperationException("The repair plan was not certified by the active safety policy.");
+        if (plan.ExecutionMode == RepairExecutionMode.Automatic && !plan.Certification.AutomaticExecutionAllowlisted)
+            throw new InvalidOperationException("Automatic repair execution is not allowlisted by the active safety policy.");
+        if (plan.Certification.RuntimeEvidenceAdvisoryOnly)
+            throw new InvalidOperationException("Runtime evidence cannot authorize a repair mutation.");
+        if (plan.Certification.RequiresExplicitConfirmation && !userConfirmed)
+            throw new InvalidOperationException("This repair requires explicit user confirmation.");
 
         await _executionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -45,7 +55,9 @@ public sealed class RepairTransactionExecutor : IRepairTransactionExecutor
             var journal = new RepairTransactionJournal(
                 $"repair-{now:yyyyMMddHHmmssfff}-{Guid.NewGuid():N}", plan.Id, plan.IssueId, plan.DeterministicKey,
                 now, now, RepairTransactionState.Planned,
-                [new(now, RepairTransactionState.Planned, "Repair transaction journal created.")]);
+                [new(now, RepairTransactionState.Planned, $"Repair transaction certified by {plan.Certification.PolicyId}.", plan.Certification.Reason)],
+                CertificationPolicyId: plan.Certification.PolicyId,
+                SafetyClass: plan.SafetyClass);
             journal = await TransitionAsync(journal, RepairTransactionState.Executing, "Atomic repair operation started.", cancellationToken: cancellationToken).ConfigureAwait(false);
             try
             {
