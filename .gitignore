@@ -27,20 +27,20 @@ _ReSharper*/
 *.DotSettings.user
 
 # RimForge runtime output (legacy repository-relative locations)
-Output/
-Logs/
-Cache/
-Temp/
-Exports/
-Snapshots/
-Sessions/
-Diagnostics/
-CrashDumps/
-GeneratedDocs/
-SteamCache/
-WorkshopCache/
-AnalysisCache/
-ForgeCache/
+/Output/
+/Logs/
+/Cache/
+/Temp/
+/Exports/
+/Snapshots/
+/Sessions/
+/Diagnostics/
+/CrashDumps/
+/GeneratedDocs/
+/SteamCache/
+/WorkshopCache/
+/AnalysisCache/
+/ForgeCache/
 
 # Runtime and diagnostic files
 *.log

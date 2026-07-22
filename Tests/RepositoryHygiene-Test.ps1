@@ -20,6 +20,17 @@ if ($gitCommand -and (Test-Path (Join-Path $gitDirectory 'HEAD'))) {
         if ($trackedGeneratedPaths.Count -gt 0) {
             throw "Generated or local-only paths are tracked by Git: $($trackedGeneratedPaths -join ', ')"
         }
+
+        $sourceFiles = @(Get-ChildItem (Join-Path $root 'src') -Recurse -File | Where-Object {
+            $_.FullName -notmatch '(?i)[\\/](bin|obj)[\\/]'
+        })
+        $ignoredSourceFiles = @($sourceFiles | Where-Object {
+            & git -C $root check-ignore --quiet -- $_.FullName
+            $LASTEXITCODE -eq 0
+        })
+        if ($ignoredSourceFiles.Count -gt 0) {
+            throw "Source files are hidden by .gitignore rules: $($ignoredSourceFiles.FullName -join ', ')"
+        }
     }
 }
 
