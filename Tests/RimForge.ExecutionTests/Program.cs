@@ -903,6 +903,27 @@ Require(projectedWorkspace.DuplicatePackageIds.SequenceEqual(["example.duplicate
 Require(projectedWorkspace.Fingerprint == projectedWorkspaceReordered.Fingerprint,
     "Library/profile projection fingerprint depended on discovery order or generation time.");
 
+var coreMod = new ModRecord
+{
+    Id = "core", PackageId = "ludeon.rimworld", Name = "Core", FolderName = "Core",
+    RootPath = "official/core", AboutPath = "official/core/About/About.xml"
+};
+var editableProfile = projectionProfile with { ActiveMods = ["ludeon.rimworld", "example.analysis.alpha"] };
+var editableWorkspace = libraryProjection.Create([coreMod, analysisAlpha, analysisBeta], [editableProfile]);
+var profileEditor = new ProfileEditService(null!);
+var editDraft = profileEditor.CreateDraft(
+    editableWorkspace,
+    editableProfile.Name,
+    ["ludeon.rimworld", "example.analysis.beta", "example.analysis.alpha"]);
+Require(editDraft.CanCommit && editDraft.Changes.AddedPackageIds.SequenceEqual(["example.analysis.beta"]),
+    "Profile edit draft did not produce a committable added-mod change set.");
+Require(editDraft.Changes.OrderChanges.Any(change => change.PackageId == "example.analysis.alpha" && change.RightIndex == 2),
+    "Profile edit draft did not report load-order movement.");
+var invalidDraft = profileEditor.CreateDraft(editableWorkspace, editableProfile.Name, ["example.missing", "example.missing"]);
+Require(!invalidDraft.CanCommit && invalidDraft.ValidationErrors.Any(error => error.Contains("Core", StringComparison.Ordinal)) &&
+        invalidDraft.ValidationErrors.Any(error => error.Contains("more than once", StringComparison.Ordinal)),
+    "Profile edit validation did not reject missing Core and duplicate entries.");
+
 Console.WriteLine("RimForge.ExecutionTests: PASSED");
 return;
 

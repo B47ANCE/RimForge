@@ -37,6 +37,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
         IDependencyIntelligenceService dependencyIntelligenceService,
         IDependencyManagementService dependencyManagementService,
         IProfileWorkspaceService profileWorkspaceService,
+        IProfileEditService profileEditService,
         IExternalProfileReconciliationService externalProfileReconciliationService,
         IModsConfigChangeMonitor modsConfigChangeMonitor,
         ISelectionService selectionService,
@@ -82,6 +83,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
         DependencyIntelligenceService = dependencyIntelligenceService;
         DependencyManagementService = dependencyManagementService;
         ProfileWorkspaceService = profileWorkspaceService;
+        ProfileEditService = profileEditService;
         ExternalProfileReconciliationService = externalProfileReconciliationService;
         ModsConfigChangeMonitor = modsConfigChangeMonitor;
         SelectionService = selectionService;
@@ -128,6 +130,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
     public IDependencyIntelligenceService DependencyIntelligenceService { get; }
     public IDependencyManagementService DependencyManagementService { get; }
     public IProfileWorkspaceService ProfileWorkspaceService { get; }
+    public IProfileEditService ProfileEditService { get; }
     public IExternalProfileReconciliationService ExternalProfileReconciliationService { get; }
     public IModsConfigChangeMonitor ModsConfigChangeMonitor { get; }
     public ISelectionService SelectionService { get; }
@@ -202,6 +205,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
         var forgeGraphProjectionService = new ForgeGraphProjectionService(dependencyGraphService);
         var hostedBackgroundWorkService = new HostedBackgroundWorkService();
         var runtimeSensorHost = new RuntimeSensorHost(runtimeEvidenceStore, hostedBackgroundWorkService);
+        var profileWorkspaceService = new ProfileWorkspaceService(platformDiscoveryService);
 
         return new RimForgeApplicationServices(
             eventBus,
@@ -225,7 +229,8 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
             forgeDnaService,
             dependencyIntelligenceService,
             dependencyManagementService,
-            new ProfileWorkspaceService(platformDiscoveryService),
+            profileWorkspaceService,
+            new ProfileEditService(profileWorkspaceService),
             new ExternalProfileReconciliationService(),
             new ModsConfigChangeMonitor(),
             new SelectionService(eventBus),

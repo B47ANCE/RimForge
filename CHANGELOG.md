@@ -1,4 +1,19 @@
-# Unreleased — Epic C Pass 1 Library/Profile Projection
+# Unreleased — Epic C Pass 2 Atomic Profile Editing
+
+## Added
+
+- Added immutable profile edit drafts with explicit added, removed, and reordered package change sets.
+- Added validation for locked profiles, empty orders, missing Core, duplicate entries, missing mods, and ambiguous package IDs.
+- Added stale-workspace fingerprint rejection before any profile files are changed.
+- Added a canonical commit path through the existing backed-up and rollback-safe profile persistence service.
+- Added behavioral and static acceptance coverage for edit preview and validation.
+
+## Changed
+
+- Registered the profile edit service in canonical application composition.
+- Advanced the client version to `2.2.0-alpha.62`.
+
+# Previous Unreleased — Epic C Pass 1 Library/Profile Projection
 
 ## Added
 

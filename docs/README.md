@@ -38,6 +38,7 @@ This directory contains current engineering references. Product-level entry poin
 - [`development/EPIC_B_PASS4_EXPLAINABILITY.md`](development/EPIC_B_PASS4_EXPLAINABILITY.md) — canonical overview and per-mod analysis rationale
 - [`development/EPIC_B_PASS5_EVIDENCE_CONVERGENCE.md`](development/EPIC_B_PASS5_EVIDENCE_CONVERGENCE.md) — runtime and compatibility evidence in canonical analysis
 - [`development/EPIC_C_PASS1_LIBRARY_PROFILE_PROJECTION.md`](development/EPIC_C_PASS1_LIBRARY_PROFILE_PROJECTION.md) — deterministic installed-library and profile reconciliation
+- [`development/EPIC_C_PASS2_ATOMIC_PROFILE_EDITING.md`](development/EPIC_C_PASS2_ATOMIC_PROFILE_EDITING.md) — validated edit drafts, change previews, and stale-write protection
 - [`development/FORGE_SESSION_FOUNDATION.md`](development/FORGE_SESSION_FOUNDATION.md) — Forge lifecycle and persistence
 - [`development/PLATFORM_DISCOVERY_FOUNDATION.md`](development/PLATFORM_DISCOVERY_FOUNDATION.md) — Steam, RimWorld, and workspace discovery
 - [`development/COMPANION_HOST_FOUNDATION.md`](development/COMPANION_HOST_FOUNDATION.md) — hidden Companion process and client control surface

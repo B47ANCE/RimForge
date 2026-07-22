@@ -43,6 +43,19 @@ public interface ILibraryProfileProjectionService
         DateTimeOffset? generatedUtc = null);
 }
 
+public interface IProfileEditService
+{
+    ProfileEditDraft CreateDraft(
+        LibraryProfileWorkspaceSnapshot workspace,
+        string profileName,
+        IReadOnlyList<string> proposedActiveMods);
+
+    Task<ProfileEditCommitResult> CommitAsync(
+        ProfileEditDraft draft,
+        LibraryProfileWorkspaceSnapshot currentWorkspace,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IProfileWorkspaceService
 {
     Task<IReadOnlyList<RimForgeProfile>> LoadProfilesAsync(

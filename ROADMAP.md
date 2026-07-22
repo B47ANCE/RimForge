@@ -84,6 +84,14 @@ RimForge is currently implementing **Epic C — Library and Profiles**. Work bui
 - [x] case-insensitive profile lookup and duplicate package-ID reporting
 - [x] stable workspace fingerprint for downstream refresh and caching
 
+### Pass 2: atomic profile editing
+
+- [x] immutable profile edit drafts and explicit change sets
+- [x] added, removed, and reordered package previews
+- [x] Core, duplicate, missing, ambiguous, empty, and lock validation
+- [x] stale-workspace detection before persistence
+- [x] canonical save path with existing backup and rollback behavior
+
 ## Later epics
 
 - **Epic C:** Library and Profiles
