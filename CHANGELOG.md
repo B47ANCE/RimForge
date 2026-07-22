@@ -1,4 +1,12 @@
-# Unreleased — Epic D Pass 3 Scalable Graph Rendering
+# Unreleased — Epic D Pass 4 Cohesive ForgeView Workflow
+
+- Converged search, Issue Viewer, profile, graph, outline, history, and Inspector navigation on the canonical selected-mod service while preserving navigation origin.
+- Added actionable loading, empty-library, failed-discovery, and degraded-runtime-evidence workspace states.
+- Added automation metadata, a keyboard-complete outline alternative, live state announcements, and an in-product keyboard reference.
+- Added executable selected-context coverage and a dedicated Epic D Pass 4 integration gate.
+- Completed Epic D and advanced the Client version to `2.2.0-alpha.73`.
+
+# 2.2.0-alpha.72 — Epic D Pass 3 Scalable Graph Rendering
 
 - Moved layouts for graphs of 160 or more nodes off the UI thread with cancellation and generation-based stale-result suppression.
 - Added incremental position reuse for small topology changes while preventing newly added nodes from overlapping retained nodes.

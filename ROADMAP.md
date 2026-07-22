@@ -208,9 +208,9 @@ Work follows the product dependency chain: runtime evidence → analysis → pro
 
 ### Pass 4: cohesive ForgeView workflow
 
-- [ ] Inspector, Issue Viewer, profile, and graph navigation converge on one selected-mod context
-- [ ] empty, loading, degraded-evidence, and failure states are actionable
-- [ ] accessibility, keyboard operation, and visual consistency acceptance
+- [x] Inspector, Issue Viewer, profile, and graph navigation converge on one selected-mod context
+- [x] empty, loading, degraded-evidence, and failure states are actionable
+- [x] accessibility, keyboard operation, and visual consistency acceptance
 
 ## Epic E — Repair Engine
 

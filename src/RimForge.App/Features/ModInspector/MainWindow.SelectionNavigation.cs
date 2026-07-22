@@ -92,10 +92,13 @@ public partial class MainWindow
         : Mods.FirstOrDefault(mod => string.Equals(mod.PackageId, packageId, StringComparison.OrdinalIgnoreCase));
 
     private void SelectModByPackageId(string? packageId)
+        => SelectModByPackageId(packageId, ForgeGraphQueryOrigin.Inspector);
+
+    private void SelectModByPackageId(string? packageId, ForgeGraphQueryOrigin origin)
     {
         var mod = FindModByPackageId(packageId);
         if (mod is null) return;
-        SelectedMod = mod;
+        SelectMod(mod, origin);
         SelectedSorterItem = ModSorterItems.FirstOrDefault(item => item.Mod.Id == mod.Id);
     }
 
@@ -169,5 +172,5 @@ public partial class MainWindow
         SelectModByPackageId(e.PackageId);
 
     private void ForgeView_ModNavigationRequested(object? sender, ModNavigationRequestedEventArgs e) =>
-        SelectModByPackageId(e.PackageId);
+        SelectModByPackageId(e.PackageId, e.Origin);
 }

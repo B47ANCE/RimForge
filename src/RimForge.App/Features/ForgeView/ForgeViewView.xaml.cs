@@ -17,8 +17,13 @@ namespace RimForge.App.Features.ForgeView;
 
 public sealed class ModNavigationRequestedEventArgs : EventArgs
 {
-    public ModNavigationRequestedEventArgs(string packageId) => PackageId = packageId;
+    public ModNavigationRequestedEventArgs(string packageId, ForgeGraphQueryOrigin origin = ForgeGraphQueryOrigin.Canvas)
+    {
+        PackageId = packageId;
+        Origin = origin;
+    }
     public string PackageId { get; }
+    public ForgeGraphQueryOrigin Origin { get; }
 }
 
 public partial class ForgeViewView : UserControl
@@ -40,8 +45,8 @@ public partial class ForgeViewView : UserControl
             Mouse.PreviewMouseWheelEvent,
             new MouseWheelEventHandler(GraphViewport_PreviewMouseWheel),
             handledEventsToo: true);
-        Loaded += (_, _) => { SubscribeToWindow(); LoadProfileLayout(force: true); RebuildOutline(); };
-        DataContextChanged += (_, _) => { SubscribeToWindow(); LoadProfileLayout(force: true); RebuildOutline(); };
+        Loaded += (_, _) => { SubscribeToWindow(); LoadProfileLayout(force: true); RebuildOutline(); UpdateWorkspaceState(); };
+        DataContextChanged += (_, _) => { SubscribeToWindow(); LoadProfileLayout(force: true); RebuildOutline(); UpdateWorkspaceState(); };
         Unloaded += (_, _) => UnsubscribeFromWindow();
     }
 
@@ -49,6 +54,7 @@ public partial class ForgeViewView : UserControl
     public event RoutedEventHandler RefreshRequested { add => AddHandler(RefreshRequestedEvent, value); remove => RemoveHandler(RefreshRequestedEvent, value); }
 
     private void Refresh_Click(object sender, RoutedEventArgs e) => RaiseEvent(new RoutedEventArgs(RefreshRequestedEvent, this));
+    private void WorkspaceStateAction_Click(object sender, RoutedEventArgs e) => Refresh_Click(sender, e);
     private void GraphMode_Click(object sender, RoutedEventArgs e)
     {
         GraphCanvas.Visibility = Visibility.Visible;
@@ -181,6 +187,7 @@ public partial class ForgeViewView : UserControl
     {
         FilterStatusText.Text = $"Showing {e.TotalNodes:N0} mods • {e.TotalEdges:N0} relationships";
         if (DataContext is MainWindow window) window.SetForgeGraphRenderMetrics(e);
+        UpdateWorkspaceState();
     }
 
     private void GraphCanvas_LayoutChanged(object? sender, ForgeGraphLayoutChangedEventArgs e)
@@ -217,8 +224,45 @@ public partial class ForgeViewView : UserControl
         if (e.PropertyName == nameof(MainWindow.SelectedMod) && DataContext is MainWindow window)
         {
             PinNodeButton.Content = GraphCanvas.PinnedPackageIds.Contains(window.SelectedMod?.PackageId ?? string.Empty, StringComparer.OrdinalIgnoreCase) ? "Unpin Node" : "Pin Node";
-            SynchronizeSelection(window.SelectedMod?.PackageId, ForgeGraphQueryOrigin.Inspector);
+            SynchronizeSelection(window.SelectedMod?.PackageId, window.SelectionOrigin);
         }
+        if (e.PropertyName is nameof(MainWindow.StatusText) or nameof(MainWindow.RuntimeEvidenceCount)) UpdateWorkspaceState();
+    }
+
+    private void UpdateWorkspaceState()
+    {
+        if (DataContext is not MainWindow window || WorkspaceStatePanel is null) return;
+        var status = window.StatusText ?? string.Empty;
+        if (status.Contains("Loading", StringComparison.OrdinalIgnoreCase))
+        {
+            ShowWorkspaceState("Loading dependency evidence", "RimForge is rebuilding the library. The graph will become interactive when discovery completes.", "Refresh in progress", false);
+            return;
+        }
+        if (status.Equals("Native scan failed", StringComparison.OrdinalIgnoreCase) || status.Equals("Startup needs attention", StringComparison.OrdinalIgnoreCase))
+        {
+            ShowWorkspaceState("Dependency graph unavailable", "Library discovery did not complete. Retry the scan; local profile data is preserved.", "Retry library scan", true);
+            return;
+        }
+        if (window.DependencyNodes.Count == 0)
+        {
+            ShowWorkspaceState("No mods to visualize", "No installed mods matched the active library scope. Refresh after confirming the RimWorld and Workshop paths.", "Refresh library", true);
+            return;
+        }
+        if (window.RuntimeEvidenceCount == 0)
+        {
+            ShowWorkspaceState("Graph uses metadata evidence", "No Companion runtime session is available yet. The topology remains usable, but runtime-backed conflicts may be incomplete.", "Check for runtime evidence", true);
+            return;
+        }
+        WorkspaceStatePanel.Visibility = Visibility.Collapsed;
+    }
+
+    private void ShowWorkspaceState(string title, string detail, string action, bool actionEnabled)
+    {
+        WorkspaceStateTitle.Text = title;
+        WorkspaceStateDetail.Text = detail;
+        WorkspaceStateAction.Content = action;
+        WorkspaceStateAction.IsEnabled = actionEnabled;
+        WorkspaceStatePanel.Visibility = Visibility.Visible;
     }
 
     private void LoadProfileLayout(bool force)
@@ -251,7 +295,7 @@ public partial class ForgeViewView : UserControl
             UpdateSelectionHistoryButtons();
             if (!string.IsNullOrWhiteSpace(state?.SelectedPackageId) &&
                 !string.Equals(state.SelectedPackageId, window.SelectedMod?.PackageId, StringComparison.OrdinalIgnoreCase))
-                Dispatcher.BeginInvoke(() => ModNavigationRequested?.Invoke(this, new ModNavigationRequestedEventArgs(state.SelectedPackageId)));
+                Dispatcher.BeginInvoke(() => ModNavigationRequested?.Invoke(this, new ModNavigationRequestedEventArgs(state.SelectedPackageId, ForgeGraphQueryOrigin.History)));
         }
         catch
         {
@@ -320,7 +364,7 @@ public partial class ForgeViewView : UserControl
         var before = _selectionState.Current.HistoryIndex;
         var selection = _selectionState.Navigate(offset);
         if (selection.HistoryIndex == before || string.IsNullOrWhiteSpace(selection.SelectedPackageId)) return;
-        ModNavigationRequested?.Invoke(this, new ModNavigationRequestedEventArgs(selection.SelectedPackageId));
+        ModNavigationRequested?.Invoke(this, new ModNavigationRequestedEventArgs(selection.SelectedPackageId, ForgeGraphQueryOrigin.History));
         GraphCanvas.CenterOnPackage(selection.FocusedPackageId);
         UpdateSelectionHistoryButtons();
         RequestLayoutSave();
@@ -443,7 +487,7 @@ public partial class ForgeViewView : UserControl
             _selectionState.Select(id, ForgeGraphQueryOrigin.Outline);
             UpdateSelectionHistoryButtons();
             RequestLayoutSave();
-            ModNavigationRequested?.Invoke(this, new ModNavigationRequestedEventArgs(id));
+            ModNavigationRequested?.Invoke(this, new ModNavigationRequestedEventArgs(id, ForgeGraphQueryOrigin.Outline));
         };
         output.Add(button);
 

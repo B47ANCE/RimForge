@@ -6,6 +6,7 @@ public enum ForgeGraphQueryOrigin
     Outline,
     Search,
     IssueNavigation,
+    Profile,
     Inspector,
     History
 }

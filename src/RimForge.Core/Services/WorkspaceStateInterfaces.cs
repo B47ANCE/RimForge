@@ -5,8 +5,9 @@ namespace RimForge.Core.Services;
 public interface ISelectionService
 {
     ModRecord? SelectedMod { get; }
+    ForgeGraphQueryOrigin Origin { get; }
     event EventHandler<ModRecord?>? SelectionChanged;
-    void Select(ModRecord? mod);
+    void Select(ModRecord? mod, ForgeGraphQueryOrigin origin = ForgeGraphQueryOrigin.Inspector);
 }
 
 public interface IProfileWorkspaceStateService

@@ -284,8 +284,7 @@ public partial class MainWindow
         var result = SearchDiscoveryResults[0];
         var mod = Mods.FirstOrDefault(candidate => candidate.Id == result.TargetId);
         if (mod is null) return;
-        if (!ReferenceEquals(SelectedMod, mod)) SelectedMod = mod;
-        ForgeViewFeature.SynchronizeSelection(mod.PackageId, ForgeGraphQueryOrigin.Search);
+        SelectMod(mod, ForgeGraphQueryOrigin.Search);
         SelectedSorterItem = ModSorterItems.FirstOrDefault(item => item.Mod.Id == mod.Id);
         var activeItem = ActiveProfileMods.FirstOrDefault(item => string.Equals(item.PackageId, mod.PackageId, StringComparison.OrdinalIgnoreCase));
         if (activeItem is not null)
@@ -321,8 +320,7 @@ public partial class MainWindow
             {
                 var mod = Mods.FirstOrDefault(candidate => candidate.Id == result.TargetId);
                 if (mod is null) return;
-                SelectedMod = mod;
-                ForgeViewFeature.SynchronizeSelection(mod.PackageId, ForgeGraphQueryOrigin.Search);
+                SelectMod(mod, ForgeGraphQueryOrigin.Search);
                 SelectedSorterItem = ModSorterItems.FirstOrDefault(item => item.Mod.Id == mod.Id);
                 ScrollToWorkspaceSection(IssueViewerWorkspacePanel, "Mod Sorter");
                 break;

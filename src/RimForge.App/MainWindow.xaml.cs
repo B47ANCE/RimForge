@@ -834,8 +834,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         set
         {
             if (!Set(ref _selectedMod, value)) return;
+            if (!_selectionOriginPending) _selectionOrigin = ForgeGraphQueryOrigin.Inspector;
             RecordSelection(value);
-            _selectionService.Select(value);
+            _selectionService.Select(value, _selectionOrigin);
+            Notify(nameof(SelectionOrigin));
             RecordGlobalNavigationSnapshot();
             NotifyForgeSelectionContext();
             Notify(nameof(SelectedInspectorDisplayName));
@@ -865,6 +867,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 Notify(nameof(SelectedInspectorPreviewImagePath));
             }
         }
+    }
+
+    private ForgeGraphQueryOrigin _selectionOrigin = ForgeGraphQueryOrigin.Inspector;
+    private bool _selectionOriginPending;
+    public ForgeGraphQueryOrigin SelectionOrigin => _selectionOrigin;
+
+    private void SelectMod(ModRecord? mod, ForgeGraphQueryOrigin origin)
+    {
+        _selectionOrigin = origin;
+        if (ReferenceEquals(SelectedMod, mod) || SelectedMod?.Id == mod?.Id)
+        {
+            _selectionService.Select(mod, origin);
+            Notify(nameof(SelectionOrigin));
+            ForgeViewFeature?.SynchronizeSelection(mod?.PackageId, origin);
+            return;
+        }
+        _selectionOriginPending = true;
+        try { SelectedMod = mod; }
+        finally { _selectionOriginPending = false; }
     }
 
 
@@ -1133,6 +1154,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
 
             if (!Set(ref _selectedProfile, value)) return;
+            if (SelectedMod is not null) SelectMod(SelectedMod, ForgeGraphQueryOrigin.Profile);
             _workspaceStateService.SetCurrentProfile(value);
             SaveProfileShellState();
             _undoService.Clear();

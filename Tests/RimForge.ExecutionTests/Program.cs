@@ -1070,6 +1070,14 @@ graphSelection.Restore(["fixture.alpha", "fixture.beta"], 1, "fixture.beta", "fi
 Require(graphSelection.Current.HistoryIndex == 1 && graphSelection.Current.FocusedPackageId == "fixture.beta",
     "Profile-owned Forge selection state did not restore deterministically.");
 
+var canonicalSelection = new SelectionService();
+canonicalSelection.Select(analysisAlpha, ForgeGraphQueryOrigin.Search);
+Require(ReferenceEquals(canonicalSelection.SelectedMod, analysisAlpha) && canonicalSelection.Origin == ForgeGraphQueryOrigin.Search,
+    "Canonical selected-mod context did not retain its navigation origin.");
+canonicalSelection.Select(analysisAlpha, ForgeGraphQueryOrigin.Profile);
+Require(canonicalSelection.Origin == ForgeGraphQueryOrigin.Profile,
+    "Canonical selected-mod context ignored an origin change for the same mod.");
+
 Console.WriteLine("RimForge.ExecutionTests: PASSED");
 return;
 

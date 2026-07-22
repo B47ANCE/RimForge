@@ -1,7 +1,9 @@
 <UserControl x:Class="RimForge.App.Features.ForgeView.ForgeViewView"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- xmlns:local="clr-namespace:RimForge.App.Features.ForgeView">
+ xmlns:local="clr-namespace:RimForge.App.Features.ForgeView"
+ Focusable="True" AutomationProperties.Name="ForgeView dependency workspace"
+ AutomationProperties.HelpText="Explore dependencies with the graph or keyboard-accessible outline.">
   <Border Style="{StaticResource Card}" Padding="0" ClipToBounds="True">
     <Grid>
       <Grid.RowDefinitions>
@@ -30,8 +32,8 @@
       <Border Grid.Row="1" Background="{DynamicResource VisualSurfaceRaisedBrush}" BorderBrush="{DynamicResource VisualBorderBrush}"
               BorderThickness="0,1,0,1" Padding="18,8">
         <WrapPanel HorizontalAlignment="Left" VerticalAlignment="Center">
-          <Button x:Name="GraphModeButton" Style="{StaticResource VisualModeSelectorButton}" Content="Graph" Tag="Active" Click="GraphMode_Click" Margin="0,0,6,0"/>
-          <Button x:Name="OutlineModeButton" Style="{StaticResource VisualModeSelectorButton}" Content="Outline" Click="OutlineMode_Click" Margin="0,0,14,0"/>
+          <Button x:Name="GraphModeButton" Style="{StaticResource VisualModeSelectorButton}" Content="Graph" Tag="Active" Click="GraphMode_Click" Margin="0,0,6,0" AutomationProperties.Name="Graph view"/>
+          <Button x:Name="OutlineModeButton" Style="{StaticResource VisualModeSelectorButton}" Content="Outline" Click="OutlineMode_Click" Margin="0,0,14,0" AutomationProperties.Name="Accessible outline view"/>
           <Button x:Name="PreviousSelectionButton" Style="{StaticResource SecondaryButton}" Content="←" ToolTip="Previous ForgeView selection" Click="PreviousSelection_Click" Width="38" IsEnabled="False" Margin="0,0,4,0"/>
           <Button x:Name="NextSelectionButton" Style="{StaticResource SecondaryButton}" Content="→" ToolTip="Next ForgeView selection" Click="NextSelection_Click" Width="38" IsEnabled="False" Margin="0,0,12,0"/>
           <Button Style="{StaticResource SecondaryButton}" Content="−" ToolTip="Zoom out" Click="ZoomOut_Click" Width="38"/>
@@ -74,6 +76,8 @@
                 BorderBrush="{DynamicResource VisualBorderBrush}" BorderThickness="1" CornerRadius="9">
           <Grid x:Name="GraphViewport">
             <local:ForgeGraphCanvas x:Name="GraphCanvas"
+               AutomationProperties.Name="Dependency graph canvas"
+               AutomationProperties.HelpText="Use arrow keys to pan, plus and minus to zoom, F to fit, and Home to center the selected mod."
                Nodes="{Binding DependencyNodes}"
                Edges="{Binding DependencyEdges}"
                SelectedPackageId="{Binding SelectedMod.PackageId}"
@@ -95,6 +99,18 @@
             <ScrollViewer x:Name="OutlineScroller" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="12" HorizontalContentAlignment="Left">
               <ItemsControl x:Name="OutlineItems" HorizontalAlignment="Left" HorizontalContentAlignment="Left"/>
             </ScrollViewer>
+            <Border x:Name="WorkspaceStatePanel" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MaxWidth="520" Padding="24" CornerRadius="10" Background="{DynamicResource VisualSurfaceRaisedBrush}"
+                    BorderBrush="{DynamicResource VisualBorderBrush}" BorderThickness="1"
+                    AutomationProperties.LiveSetting="Polite">
+              <StackPanel>
+                <TextBlock x:Name="WorkspaceStateTitle" FontSize="20" FontWeight="SemiBold" TextAlignment="Center"/>
+                <TextBlock x:Name="WorkspaceStateDetail" Margin="0,8,0,14" Foreground="{DynamicResource TextMutedBrush}"
+                           TextWrapping="Wrap" TextAlignment="Center"/>
+                <Button x:Name="WorkspaceStateAction" Style="{StaticResource PrimaryButton}" Content="Refresh library"
+                        HorizontalAlignment="Center" Click="WorkspaceStateAction_Click"/>
+              </StackPanel>
+            </Border>
             <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="12" Padding="10,6" CornerRadius="6" Background="{DynamicResource VisualSurfaceRaisedBrush}" BorderBrush="{DynamicResource VisualBorderBrush}" BorderThickness="1">
               <StackPanel Orientation="Horizontal">
                 <TextBlock x:Name="FilterStatusText" Text="All graph evidence" Foreground="{StaticResource TextMutedBrush}" FontSize="11" Margin="0,0,12,0"/>
@@ -160,7 +176,7 @@
       <Border Grid.Row="3" Background="{DynamicResource VisualSurfaceRaisedBrush}" BorderBrush="{DynamicResource VisualBorderBrush}"
               BorderThickness="0,1,0,0" Padding="18,8">
         <Grid>
-          <TextBlock Text="Minimap: click or drag to focus" Foreground="{DynamicResource TextMutedBrush}" FontSize="10"/>
+          <TextBlock Text="Minimap: click or drag to focus • Keyboard: arrows pan • +/- zoom • F fits • Home centers • Outline exposes every node" Foreground="{DynamicResource TextMutedBrush}" FontSize="10"/>
           <TextBlock Text="{Binding ForgeGraphRenderStatus}" HorizontalAlignment="Right"
                      Foreground="{DynamicResource TextMutedBrush}" FontSize="10"/>
         </Grid>
