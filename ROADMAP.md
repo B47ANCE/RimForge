@@ -202,9 +202,9 @@ Work follows the product dependency chain: runtime evidence → analysis → pro
 
 ### Pass 3: scalable graph rendering
 
-- [ ] incremental layout and rendering for large libraries
-- [ ] cancellation, stale-result suppression, and bounded caches
-- [ ] measurable performance budgets with representative fixtures
+- [x] incremental layout and rendering for large libraries
+- [x] cancellation, stale-result suppression, and bounded caches
+- [x] measurable performance budgets with representative fixtures
 
 ### Pass 4: cohesive ForgeView workflow
 

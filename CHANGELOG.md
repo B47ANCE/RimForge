@@ -1,4 +1,13 @@
-# Unreleased — Epic D Pass 2 Canonical Graph Query and Selection
+# Unreleased — Epic D Pass 3 Scalable Graph Rendering
+
+- Moved layouts for graphs of 160 or more nodes off the UI thread with cancellation and generation-based stale-result suppression.
+- Added incremental position reuse for small topology changes while preventing newly added nodes from overlapping retained nodes.
+- Added an eight-entry LRU layout cache and live layout/cache generation telemetry.
+- Preserved viewport culling and surfaced render-budget overruns in the ForgeView status line.
+- Added an executable 1,000-node/1,197-edge performance fixture with explicit query and layout budgets plus cancellation coverage.
+- Advanced the Client version to `2.2.0-alpha.72`.
+
+# 2.2.0-alpha.71 — Epic D Pass 2 Canonical Graph Query and Selection
 
 - Added a Core-owned Forge graph query/result contract shared by the canvas and outline, with explicit search, profile, health, relationship, and focused-path criteria.
 - Added deterministic Core selection state with navigation origins, focus, branch-safe history, and profile-owned persistence.

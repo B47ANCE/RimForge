@@ -21,6 +21,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimForge.Companion.Host", "src\RimForge.Companion.Host\RimForge.Companion.Host.csproj", "{755124AD-10CD-4C8B-AB5F-6E25F3997132}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimForge.ForgeViewPerformanceTests", "Tests\RimForge.ForgeViewPerformanceTests\RimForge.ForgeViewPerformanceTests.csproj", "{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -127,11 +131,24 @@ Global
 		{755124AD-10CD-4C8B-AB5F-6E25F3997132}.Release|x64.Build.0 = Release|Any CPU
 		{755124AD-10CD-4C8B-AB5F-6E25F3997132}.Release|x86.ActiveCfg = Release|Any CPU
 		{755124AD-10CD-4C8B-AB5F-6E25F3997132}.Release|x86.Build.0 = Release|Any CPU
+		{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB}.Debug|x64.Build.0 = Debug|Any CPU
+		{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB}.Debug|x86.Build.0 = Debug|Any CPU
+		{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB}.Release|x64.ActiveCfg = Release|Any CPU
+		{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB}.Release|x64.Build.0 = Release|Any CPU
+		{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB}.Release|x86.ActiveCfg = Release|Any CPU
+		{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{755124AD-10CD-4C8B-AB5F-6E25F3997132} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{CF1C91A1-10CD-4DD0-AF5A-A7466C820FCB} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

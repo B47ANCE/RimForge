@@ -5,6 +5,8 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -42,7 +44,8 @@ public sealed class ForgeGraphLayoutChangedEventArgs : EventArgs
 
 public sealed class ForgeGraphRenderCompletedEventArgs : EventArgs
 {
-    public ForgeGraphRenderCompletedEventArgs(int totalNodes, int renderedNodes, int totalEdges, int renderedEdges, TimeSpan elapsed, bool viewportCullingEnabled)
+    public ForgeGraphRenderCompletedEventArgs(int totalNodes, int renderedNodes, int totalEdges, int renderedEdges, TimeSpan elapsed, bool viewportCullingEnabled,
+        TimeSpan layoutElapsed, bool layoutPending, bool layoutCacheHit, int layoutCacheEntries, long layoutGeneration)
     {
         TotalNodes = totalNodes;
         RenderedNodes = renderedNodes;
@@ -50,6 +53,11 @@ public sealed class ForgeGraphRenderCompletedEventArgs : EventArgs
         RenderedEdges = renderedEdges;
         Elapsed = elapsed;
         ViewportCullingEnabled = viewportCullingEnabled;
+        LayoutElapsed = layoutElapsed;
+        LayoutPending = layoutPending;
+        LayoutCacheHit = layoutCacheHit;
+        LayoutCacheEntries = layoutCacheEntries;
+        LayoutGeneration = layoutGeneration;
     }
 
     public int TotalNodes { get; }
@@ -60,6 +68,21 @@ public sealed class ForgeGraphRenderCompletedEventArgs : EventArgs
     public int CulledEdges => Math.Max(0, TotalEdges - RenderedEdges);
     public TimeSpan Elapsed { get; }
     public bool ViewportCullingEnabled { get; }
+    public TimeSpan LayoutElapsed { get; }
+    public bool LayoutPending { get; }
+    public bool LayoutCacheHit { get; }
+    public int LayoutCacheEntries { get; }
+    public long LayoutGeneration { get; }
+}
+
+public sealed record ForgeGraphLayoutBenchmarkResult(int Nodes, int Edges, TimeSpan Elapsed, int Positions);
+
+public static class ForgeGraphPerformanceBudgets
+{
+    public const int RepresentativeNodeCount = 1000;
+    public static readonly TimeSpan QueryBudget = TimeSpan.FromMilliseconds(250);
+    public static readonly TimeSpan LayoutBudget = TimeSpan.FromSeconds(2);
+    public static readonly TimeSpan RenderBudget = TimeSpan.FromMilliseconds(33);
 }
 
 public sealed class ForgeGraphCanvas : FrameworkElement
@@ -70,10 +93,21 @@ public sealed class ForgeGraphCanvas : FrameworkElement
     private const double HorizontalGap = 72;
     private const double VerticalGap = 34;
     private const int ViewportCullingThreshold = 120;
+    private const int AsyncLayoutThreshold = 160;
+    private const int IncrementalLayoutChangeLimit = 64;
+    private const int MaxLayoutCacheEntries = 8;
     private const double ViewportCullMargin = 180;
     private readonly Dictionary<string, Rect> _nodeRects = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, Point> _layoutCache = new(StringComparer.OrdinalIgnoreCase);
     private string _layoutSignature = string.Empty;
+    private string _requestedLayoutSignature = string.Empty;
+    private readonly Dictionary<string, LayoutCacheEntry> _layoutResults = new(StringComparer.Ordinal);
+    private readonly LinkedList<string> _layoutLru = new();
+    private CancellationTokenSource? _layoutCancellation;
+    private long _layoutGeneration;
+    private bool _layoutPending;
+    private bool _layoutCacheHit;
+    private TimeSpan _layoutElapsed;
     private Rect _logicalBounds = Rect.Empty;
     private Point _pan;
     private Point _dragOrigin;
@@ -152,6 +186,17 @@ public sealed class ForgeGraphCanvas : FrameworkElement
         MouseRightButtonUp += OnMouseRightButtonUp;
         KeyDown += OnKeyDown;
         SizeChanged += (_, _) => { if (!_hasInitializedView) FitToView(); };
+        Unloaded += (_, _) => CancelPendingLayout();
+    }
+
+    public static ForgeGraphLayoutBenchmarkResult BenchmarkLayout(
+        IReadOnlyList<DependencyGraphNode> nodes,
+        IReadOnlyList<DependencyGraphEdge> edges,
+        CancellationToken cancellationToken = default)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var positions = Layout(nodes, edges, cancellationToken);
+        return new ForgeGraphLayoutBenchmarkResult(nodes.Count, edges.Count, stopwatch.Elapsed, positions.Count);
     }
 
     private static void OnCollectionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -188,8 +233,9 @@ public sealed class ForgeGraphCanvas : FrameworkElement
 
     private void InvalidateLayoutCache()
     {
+        CancelPendingLayout();
         _layoutSignature = string.Empty;
-        _layoutCache.Clear();
+        _requestedLayoutSignature = string.Empty;
         _logicalBounds = Rect.Empty;
         _hasInitializedView = false;
         InvalidateVisual();
@@ -361,7 +407,8 @@ public sealed class ForgeGraphCanvas : FrameworkElement
     }
 
     private void PublishRenderMetrics(int totalNodes, int renderedNodes, int totalEdges, int renderedEdges, TimeSpan elapsed, bool cullingEnabled) =>
-        RenderCompleted?.Invoke(this, new ForgeGraphRenderCompletedEventArgs(totalNodes, renderedNodes, totalEdges, renderedEdges, elapsed, cullingEnabled));
+        RenderCompleted?.Invoke(this, new ForgeGraphRenderCompletedEventArgs(totalNodes, renderedNodes, totalEdges, renderedEdges, elapsed, cullingEnabled,
+            _layoutElapsed, _layoutPending, _layoutCacheHit, _layoutResults.Count, _layoutGeneration));
 
     private (List<DependencyGraphNode> Nodes, List<DependencyGraphEdge> Edges) GetVisibleTopology()
     {
@@ -399,15 +446,154 @@ public sealed class ForgeGraphCanvas : FrameworkElement
 
     private void EnsureLayout(IReadOnlyList<DependencyGraphNode> nodes, IReadOnlyList<DependencyGraphEdge> edges)
     {
-        var signature = string.Join("|", nodes.Select(n => n.PackageId ?? n.Id).OrderBy(x => x, StringComparer.OrdinalIgnoreCase)) + "::" +
-                        string.Join("|", edges.Select(e => $"{e.SourceId}>{e.TargetId}:{e.Relationship}").OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
+        var signature = BuildLayoutSignature(nodes, edges);
         if (string.Equals(signature, _layoutSignature, StringComparison.Ordinal)) return;
+        if (TryUseCachedLayout(signature)) return;
+        if (nodes.Count >= AsyncLayoutThreshold)
+        {
+            ScheduleLayout(nodes, edges, signature);
+            return;
+        }
+
+        CancelPendingLayout();
+        var stopwatch = Stopwatch.StartNew();
+        ApplyLayout(signature, Layout(nodes, edges, CancellationToken.None), stopwatch.Elapsed, cacheHit: false, _layoutGeneration);
+    }
+
+    private static string BuildLayoutSignature(IReadOnlyList<DependencyGraphNode> nodes, IReadOnlyList<DependencyGraphEdge> edges) =>
+        string.Join("|", nodes.Select(n => n.PackageId ?? n.Id).OrderBy(x => x, StringComparer.OrdinalIgnoreCase)) + "::" +
+        string.Join("|", edges.Select(e => $"{e.SourceId}>{e.TargetId}:{e.Relationship}").OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
+
+    private bool TryUseCachedLayout(string signature)
+    {
+        if (!_layoutResults.TryGetValue(signature, out var cached)) return false;
+        TouchLayoutCache(signature);
+        ApplyLayout(signature, new Dictionary<string, Point>(cached.Positions, StringComparer.OrdinalIgnoreCase), cached.Elapsed, cacheHit: true, _layoutGeneration);
+        return true;
+    }
+
+    private void ScheduleLayout(IReadOnlyList<DependencyGraphNode> nodes, IReadOnlyList<DependencyGraphEdge> edges, string signature)
+    {
+        if (_layoutPending && string.Equals(signature, _requestedLayoutSignature, StringComparison.Ordinal)) return;
+        CancelPendingLayout();
+        var cancellation = new CancellationTokenSource();
+        _layoutCancellation = cancellation;
+        var generation = ++_layoutGeneration;
+        _requestedLayoutSignature = signature;
+        _layoutPending = true;
+        _layoutCacheHit = false;
+        var nodeSnapshot = nodes.ToArray();
+        var edgeSnapshot = edges.ToArray();
+        var previous = new Dictionary<string, Point>(_layoutCache, StringComparer.OrdinalIgnoreCase);
+        _ = BuildLayoutAsync(nodeSnapshot, edgeSnapshot, signature, previous, generation, cancellation.Token);
+    }
+
+    private async Task BuildLayoutAsync(
+        IReadOnlyList<DependencyGraphNode> nodes,
+        IReadOnlyList<DependencyGraphEdge> edges,
+        string signature,
+        IReadOnlyDictionary<string, Point> previous,
+        long generation,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var stopwatch = Stopwatch.StartNew();
+            var positions = await Task.Run(() => Layout(nodes, edges, cancellationToken), cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            positions = ReuseStablePositions(positions, previous);
+            var elapsed = stopwatch.Elapsed;
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (cancellationToken.IsCancellationRequested || generation != _layoutGeneration ||
+                    !string.Equals(signature, _requestedLayoutSignature, StringComparison.Ordinal)) return;
+                ApplyLayout(signature, positions, elapsed, cacheHit: false, generation);
+                InvalidateVisual();
+                if (!_hasInitializedView) FitToView();
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer topology owns layout publication.
+        }
+        catch
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (generation == _layoutGeneration) _layoutPending = false;
+                InvalidateVisual();
+            });
+        }
+    }
+
+    private static Dictionary<string, Point> ReuseStablePositions(
+        Dictionary<string, Point> next,
+        IReadOnlyDictionary<string, Point> previous)
+    {
+        var changed = next.Keys.Except(previous.Keys, StringComparer.OrdinalIgnoreCase).Count() +
+                      previous.Keys.Except(next.Keys, StringComparer.OrdinalIgnoreCase).Count();
+        if (changed > IncrementalLayoutChangeLimit) return next;
+        var retained = next.Keys.Intersect(previous.Keys, StringComparer.OrdinalIgnoreCase).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var id in retained)
+            next[id] = previous[id];
+        var occupied = retained.Select(id => new Rect(next[id].X, next[id].Y, NodeWidth, NodeHeight)).ToList();
+        foreach (var id in next.Keys.Except(retained, StringComparer.OrdinalIgnoreCase).OrderBy(value => value, StringComparer.OrdinalIgnoreCase))
+        {
+            var candidate = next[id];
+            var bounds = new Rect(candidate.X, candidate.Y, NodeWidth, NodeHeight);
+            while (occupied.Any(existing => existing.IntersectsWith(bounds)))
+            {
+                candidate.Y += NodeHeight + VerticalGap;
+                bounds = new Rect(candidate.X, candidate.Y, NodeWidth, NodeHeight);
+            }
+            next[id] = candidate;
+            occupied.Add(bounds);
+        }
+        return next;
+    }
+
+    private void ApplyLayout(string signature, Dictionary<string, Point> positions, TimeSpan elapsed, bool cacheHit, long generation)
+    {
         _layoutSignature = signature;
-        _layoutCache = Layout(nodes, edges);
+        _requestedLayoutSignature = signature;
+        _layoutCache = positions;
         foreach (var pair in _customPositions)
-            if (_layoutCache.ContainsKey(pair.Key))
-                _layoutCache[pair.Key] = pair.Value;
+            if (_layoutCache.ContainsKey(pair.Key)) _layoutCache[pair.Key] = pair.Value;
         _logicalBounds = CalculateLogicalBounds(_layoutCache.Values);
+        _layoutElapsed = elapsed;
+        _layoutPending = false;
+        _layoutCacheHit = cacheHit;
+        _layoutGeneration = Math.Max(_layoutGeneration, generation);
+        var completedCancellation = Interlocked.Exchange(ref _layoutCancellation, null);
+        completedCancellation?.Dispose();
+        AddLayoutCache(signature, _layoutCache, elapsed);
+    }
+
+    private void AddLayoutCache(string signature, IReadOnlyDictionary<string, Point> positions, TimeSpan elapsed)
+    {
+        _layoutResults[signature] = new LayoutCacheEntry(new Dictionary<string, Point>(positions, StringComparer.OrdinalIgnoreCase), elapsed);
+        TouchLayoutCache(signature);
+        while (_layoutResults.Count > MaxLayoutCacheEntries && _layoutLru.First is { } oldest)
+        {
+            _layoutResults.Remove(oldest.Value);
+            _layoutLru.RemoveFirst();
+        }
+    }
+
+    private void TouchLayoutCache(string signature)
+    {
+        var node = _layoutLru.Find(signature);
+        if (node is not null) _layoutLru.Remove(node);
+        _layoutLru.AddLast(signature);
+    }
+
+    private void CancelPendingLayout()
+    {
+        var cancellation = Interlocked.Exchange(ref _layoutCancellation, null);
+        if (cancellation is null) return;
+        cancellation.Cancel();
+        cancellation.Dispose();
+        _layoutPending = false;
     }
 
     private static Rect CalculateLogicalBounds(IEnumerable<Point> positions)
@@ -421,8 +607,9 @@ public sealed class ForgeGraphCanvas : FrameworkElement
         return new Rect(minX, minY, Math.Max(1, maxX - minX), Math.Max(1, maxY - minY));
     }
 
-    private static Dictionary<string, Point> Layout(IReadOnlyList<DependencyGraphNode> nodes, IReadOnlyList<DependencyGraphEdge> edges)
+    private static Dictionary<string, Point> Layout(IReadOnlyList<DependencyGraphNode> nodes, IReadOnlyList<DependencyGraphEdge> edges, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var nodeById = nodes
             .GroupBy(node => node.PackageId ?? node.Id, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
@@ -441,13 +628,16 @@ public sealed class ForgeGraphCanvas : FrameworkElement
             undirected[edge.TargetId].Add(edge.SourceId);
         }
 
-        var components = BuildConnectedComponents(ids, undirected)
+        var components = BuildConnectedComponents(ids, undirected, cancellationToken)
             .OrderByDescending(component => component.Count)
             .ThenBy(component => MinimumNodeOrderKey(component), StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var componentLayouts = components
-            .Select(component => LayoutConnectedComponent(component, validEdges, nodeById))
-            .ToArray();
+        var componentLayouts = new List<ComponentLayout>(components.Length);
+        foreach (var component in components)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            componentLayouts.Add(LayoutConnectedComponent(component, validEdges, nodeById, cancellationToken));
+        }
 
         const double componentGap = 150;
         var totalArea = componentLayouts.Sum(layout => Math.Max(NodeWidth, layout.Bounds.Width) * Math.Max(NodeHeight, layout.Bounds.Height));
@@ -459,6 +649,7 @@ public sealed class ForgeGraphCanvas : FrameworkElement
 
         foreach (var layout in componentLayouts)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var width = Math.Max(NodeWidth, layout.Bounds.Width);
             var height = Math.Max(NodeHeight, layout.Bounds.Height);
             if (cursorX > 0 && cursorX + width > targetRowWidth)
@@ -480,18 +671,21 @@ public sealed class ForgeGraphCanvas : FrameworkElement
 
     private static IReadOnlyList<HashSet<string>> BuildConnectedComponents(
         IReadOnlyList<string> ids,
-        IReadOnlyDictionary<string, HashSet<string>> undirected)
+        IReadOnlyDictionary<string, HashSet<string>> undirected,
+        CancellationToken cancellationToken)
     {
         var remaining = ids.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var result = new List<HashSet<string>>();
         foreach (var seed in ids)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!remaining.Remove(seed)) continue;
             var component = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { seed };
             var queue = new Queue<string>();
             queue.Enqueue(seed);
             while (queue.Count > 0)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var current = queue.Dequeue();
                 foreach (var neighbor in undirected[current].OrderBy(NodeOrderKey, StringComparer.OrdinalIgnoreCase))
                 {
@@ -508,14 +702,15 @@ public sealed class ForgeGraphCanvas : FrameworkElement
     private static ComponentLayout LayoutConnectedComponent(
         HashSet<string> component,
         IReadOnlyList<DependencyGraphEdge> allEdges,
-        IReadOnlyDictionary<string, DependencyGraphNode> nodeById)
+        IReadOnlyDictionary<string, DependencyGraphNode> nodeById,
+        CancellationToken cancellationToken)
     {
         var edges = allEdges.Where(edge => component.Contains(edge.SourceId) && component.Contains(edge.TargetId)).ToArray();
         var dependencyToDependents = component.ToDictionary(id => id, _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
         foreach (var edge in edges)
             dependencyToDependents[edge.TargetId].Add(edge.SourceId);
 
-        var stronglyConnected = FindStronglyConnectedComponents(component, dependencyToDependents);
+        var stronglyConnected = FindStronglyConnectedComponents(component, dependencyToDependents, cancellationToken);
         var componentIndex = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < stronglyConnected.Count; index++)
             foreach (var id in stronglyConnected[index])
@@ -544,6 +739,7 @@ public sealed class ForgeGraphCanvas : FrameworkElement
 
         while (ready.Count > 0)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var current = ready.Min;
             ready.Remove(current);
             foreach (var next in dag[current])
@@ -561,13 +757,14 @@ public sealed class ForgeGraphCanvas : FrameworkElement
                 group => group.Key,
                 group => group.Select(pair => pair.Key).OrderBy(id => NodeSortKey(nodeById[id]), StringComparer.OrdinalIgnoreCase).ToList());
 
-        OptimizeLayerOrdering(layers, edges);
+        OptimizeLayerOrdering(layers, edges, cancellationToken);
 
         var maxLayerHeight = layers.Values.Max(layer => Math.Max(1, layer.Count) * NodeHeight + Math.Max(0, layer.Count - 1) * VerticalGap);
         var dynamicHorizontalGap = Math.Clamp(HorizontalGap + Math.Sqrt(Math.Max(1, edges.Length)) * 5, 88, 156);
         var positions = new Dictionary<string, Point>(StringComparer.OrdinalIgnoreCase);
         foreach (var pair in layers)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var layerHeight = Math.Max(1, pair.Value.Count) * NodeHeight + Math.Max(0, pair.Value.Count - 1) * VerticalGap;
             var y = (maxLayerHeight - layerHeight) / 2;
             foreach (var id in pair.Value)
@@ -582,7 +779,8 @@ public sealed class ForgeGraphCanvas : FrameworkElement
 
     private static void OptimizeLayerOrdering(
         Dictionary<int, List<string>> layers,
-        IReadOnlyList<DependencyGraphEdge> edges)
+        IReadOnlyList<DependencyGraphEdge> edges,
+        CancellationToken cancellationToken)
     {
         if (layers.Count <= 1) return;
         var neighbors = layers.Values.SelectMany(layer => layer)
@@ -596,6 +794,7 @@ public sealed class ForgeGraphCanvas : FrameworkElement
         var orderedLevels = layers.Keys.OrderBy(level => level).ToArray();
         for (var pass = 0; pass < 6; pass++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var sweep = pass % 2 == 0 ? orderedLevels : orderedLevels.Reverse();
             foreach (var level in sweep)
             {
@@ -623,7 +822,8 @@ public sealed class ForgeGraphCanvas : FrameworkElement
 
     private static IReadOnlyList<List<string>> FindStronglyConnectedComponents(
         IEnumerable<string> ids,
-        IReadOnlyDictionary<string, HashSet<string>> adjacency)
+        IReadOnlyDictionary<string, HashSet<string>> adjacency,
+        CancellationToken cancellationToken)
     {
         var nextIndex = 0;
         var indexById = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -634,6 +834,7 @@ public sealed class ForgeGraphCanvas : FrameworkElement
 
         void Visit(string id)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             indexById[id] = nextIndex;
             lowLinkById[id] = nextIndex;
             nextIndex++;
@@ -667,7 +868,10 @@ public sealed class ForgeGraphCanvas : FrameworkElement
         }
 
         foreach (var id in ids.OrderBy(NodeOrderKey, StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!indexById.ContainsKey(id)) Visit(id);
+        }
         return result;
     }
 
@@ -683,6 +887,7 @@ public sealed class ForgeGraphCanvas : FrameworkElement
         return $"2|{packageId}";
     }
 
+    private sealed record LayoutCacheEntry(Dictionary<string, Point> Positions, TimeSpan Elapsed);
     private sealed record ComponentLayout(Dictionary<string, Point> Positions, Rect Bounds);
 
     private HashSet<string> BuildFocusedNodeSet(IReadOnlyList<DependencyGraphEdge> edges)

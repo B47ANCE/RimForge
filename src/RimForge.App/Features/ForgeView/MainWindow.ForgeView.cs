@@ -75,7 +75,11 @@ public partial class MainWindow
     public string ForgeGraphRenderStatus => _forgeGraphRenderMetrics is null
         ? "Render telemetry waiting for the graph viewport."
         : $"Rendered {_forgeGraphRenderMetrics.RenderedNodes}/{_forgeGraphRenderMetrics.TotalNodes} nodes and {_forgeGraphRenderMetrics.RenderedEdges}/{_forgeGraphRenderMetrics.TotalEdges} edges in {_forgeGraphRenderMetrics.Elapsed.TotalMilliseconds:0.0} ms" +
-          (_forgeGraphRenderMetrics.ViewportCullingEnabled ? $" • culled {_forgeGraphRenderMetrics.CulledNodes} nodes" : " • full topology");
+          (_forgeGraphRenderMetrics.ViewportCullingEnabled ? $" • culled {_forgeGraphRenderMetrics.CulledNodes} nodes" : " • full topology") +
+          (_forgeGraphRenderMetrics.LayoutPending ? " • layout pending" : $" • layout {_forgeGraphRenderMetrics.LayoutElapsed.TotalMilliseconds:0.0} ms") +
+          (_forgeGraphRenderMetrics.LayoutCacheHit ? " • cache hit" : string.Empty) +
+          $" • cache {_forgeGraphRenderMetrics.LayoutCacheEntries}/8" +
+          (_forgeGraphRenderMetrics.Elapsed > ForgeGraphPerformanceBudgets.RenderBudget ? " • over render budget" : string.Empty);
 
     public void SetForgeGraphRenderMetrics(ForgeGraphRenderCompletedEventArgs metrics)
     {
@@ -84,7 +88,10 @@ public partial class MainWindow
             || _forgeGraphRenderMetrics.RenderedNodes != metrics.RenderedNodes
             || _forgeGraphRenderMetrics.TotalEdges != metrics.TotalEdges
             || _forgeGraphRenderMetrics.RenderedEdges != metrics.RenderedEdges
-            || _forgeGraphRenderMetrics.ViewportCullingEnabled != metrics.ViewportCullingEnabled;
+            || _forgeGraphRenderMetrics.ViewportCullingEnabled != metrics.ViewportCullingEnabled
+            || _forgeGraphRenderMetrics.LayoutPending != metrics.LayoutPending
+            || _forgeGraphRenderMetrics.LayoutCacheHit != metrics.LayoutCacheHit
+            || _forgeGraphRenderMetrics.LayoutGeneration != metrics.LayoutGeneration;
         var now = DateTimeOffset.UtcNow;
         if (!topologyChanged && now - _lastForgeRenderTelemetryAt < TimeSpan.FromMilliseconds(500)) return;
         _forgeGraphRenderMetrics = metrics;
