@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>RimForge.UI</RootNamespace>
+    <AssemblyName>RimForge.UI</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RimForge.Core\RimForge.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\Branding\Logo\RimForge.Logo.png" />
+    <Resource Include="Assets\Branding\Badge\RimForge.Badge.png" />
+    <None Include="Assets\Branding\Badge\RimForge.Badge.ico" />
+    <Resource Include="Assets\Branding\Anvil\RimForge.Anvil.Base.svg" />
+    <Resource Include="Assets\Icons\Actions\Refresh.png" />
+    <Resource Include="Assets\Icons\Actions\Refresh.svg" />
+    <Resource Include="Assets\Icons\State\Locked.png" />
+    <Resource Include="Assets\Icons\State\Locked.svg" />
+    <Resource Include="Assets\Icons\State\Unlocked.png" />
+    <Resource Include="Assets\Icons\State\Unlocked.svg" />
+    <Resource Include="Assets\Icons\Source\Official.svg" />
+    <Resource Include="Assets\Icons\Source\SteamWorkshop.svg" />
+    <Resource Include="Assets\Branding\AssetManifest.json" />
+  </ItemGroup>
+</Project>

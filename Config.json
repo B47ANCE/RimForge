@@ -1,12 +1,13 @@
 {
-  "Version": "2.1.0-alpha.5",
+  "Version": "2.2.0-alpha.60",
   "RootFolders": [
-    "C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\294100",
-    "C:\\Program Files (x86)\\Steam\\steamapps\\common\\RimWorld\\Mods"
+    "E:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\294100",
+    "E:\\Program Files (x86)\\Steam\\steamapps\\common\\RimWorld\\Mods",
+    "E:\\Program Files (x86)\\Steam\\steamapps\\common\\RimWorld\\Data"
   ],
   "OutputFolder": "Output",
-  "LogFolder": "Logs",
-  "CacheFolder": "Cache",
+  "LogFolder": "Output\\Logs",
+  "CacheFolder": "Output\\Cache",
   "ExternalTimeoutSeconds": 10,
   "Threads": 0,
   "Verbose": true,
@@ -24,14 +25,29 @@
   },
   "DatabaseBuilder": {
     "Enabled": true,
-    "OutputFolder": "Database.Generated"
+    "OutputFolder": "Output\\Database\\Generated"
   },
   "TargetRimWorldVersion": "1.6",
-  "DependencyManifest": "Database\\Dependencies.json",
+  "DependencyManifest": "Database.Curated\\Dependencies.json",
   "Incremental": {
     "Enabled": true,
     "FingerprintSchemaVersion": 1,
     "TrackTextureFiles": true,
     "FullVerificationIntervalDays": 7
+  },
+  "RimWorldExecutable": "E:\\Program Files (x86)\\Steam\\steamapps\\common\\RimWorld\\RimWorldWin64.exe",
+  "SteamExecutable": "E:\\Program Files (x86)\\Steam\\steam.exe",
+  "Ui": {
+    "ShowForgeNarrative": true,
+    "OpenConsoleOnGameLaunch": false,
+    "FirstRunGuideCompleted": true,
+    "FirstRunGuideRevision": 2,
+    "DependencyAssistanceMode": "Automatic",
+    "OrphanCleanupMode": "Ask",
+    "LoadOrderSortingMode": "CategoryFirst",
+    "LaterBandsOverrideEarlier": true,
+    "ReconcileDependenciesDownwardOnly": true,
+    "CuratedAnchorsBidirectional": true,
+    "LoadOrderRulePackId": "rimforge.category-first.v1"
   }
 }

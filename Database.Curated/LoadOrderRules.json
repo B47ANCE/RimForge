@@ -1,6 +1,268 @@
-﻿{
-    "SchemaVersion":  1,
-    "Rules":  [
-
-              ]
+{
+  "SchemaVersion": 4,
+  "Policy": "CategoryFirst",
+  "PrecedenceStatement": "Later bands override earlier bands",
+  "LaterCategoryOverridesEarlier": true,
+  "TopAnchors": [
+    "brrainz.harmony",
+    "ludeon.rimworld",
+    "ludeon.rimworld.royalty",
+    "ludeon.rimworld.ideology",
+    "ludeon.rimworld.biotech",
+    "ludeon.rimworld.anomaly",
+    "ludeon.rimworld.odyssey",
+    "smashphil.srtsexpanded",
+    "unlimitedhugs.hugslib",
+    "jecrell.jecstools",
+    "erdelf.humanoidalienraces",
+    "edb.preparecarefully",
+    "void.charactereditor"
+  ],
+  "CategoryBands": [
+    "Libraries",
+    "SpecialFrameworkExceptions",
+    "EarlyOverhauls",
+    "MapGeneration",
+    "Factions",
+    "Traits",
+    "AndroidsAndRobots",
+    "Medical",
+    "GameplayMechanicsAndUi",
+    "Items",
+    "RacesAnimalsAndPawns",
+    "BottomRequired"
+  ],
+  "BottomAnchors": [
+    "krkr.rocketman",
+    "vr.missilegirl"
+  ],
+  "PackageRules": [
+    {
+      "PackageId": "krkr.rocketman",
+      "Category": "BottomAnchor",
+      "Confidence": "Hard",
+      "Reason": "Canonical bottom anchor",
+      "RuleId": "rf.load.package.krkr-rocketman",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "PackageId": "vr.missilegirl",
+      "Category": "BottomAnchor",
+      "Confidence": "Hard",
+      "Reason": "Canonical bottom anchor",
+      "RuleId": "rf.load.package.vr-missilegirl",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "NameContains": "What the Hack",
+      "Category": "SpecialFrameworkExceptions",
+      "Confidence": "Recommended",
+      "Reason": "Community guide places What the Hack immediately after libraries",
+      "RuleId": "rf.load.package.what-the-hack",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "NameContains": "Giddy-Up 2",
+      "Category": "SpecialFrameworkExceptions",
+      "Confidence": "Recommended",
+      "Reason": "Community guide post-library placement",
+      "RuleId": "rf.load.package.giddy-up-2",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "NameContains": "Giddy-up",
+      "Category": "SpecialFrameworkExceptions",
+      "Confidence": "Recommended",
+      "Reason": "Community guide post-library placement",
+      "RuleId": "rf.load.package.giddy-up",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "NameContains": "Doors Expanded",
+      "Category": "SpecialFrameworkExceptions",
+      "Confidence": "Recommended",
+      "Reason": "Community guide post-library placement",
+      "RuleId": "rf.load.package.doors-expanded",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "NameContains": "Third Age",
+      "Category": "SpecialFrameworkExceptions",
+      "Confidence": "Recommended",
+      "Reason": "Community guide post-library placement",
+      "RuleId": "rf.load.package.third-age",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "NameContains": "RimWorld of Magic",
+      "Category": "EarlyOverhauls",
+      "Confidence": "Recommended",
+      "Reason": "Foundational overhaul placed high by the community guide",
+      "RuleId": "rf.load.package.rimworld-of-magic",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "NameContains": "Medieval Times",
+      "Category": "EarlyOverhauls",
+      "Confidence": "Recommended",
+      "Reason": "Foundational overhaul placed high by the community guide",
+      "RuleId": "rf.load.package.medieval-times",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "NameContains": "RimWar",
+      "Category": "EarlyOverhauls",
+      "Confidence": "Recommended",
+      "Reason": "Foundational overhaul placed high by the community guide",
+      "RuleId": "rf.load.package.rimwar",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "NameContains": "Rimhammer - The End Times",
+      "Category": "EarlyOverhauls",
+      "Confidence": "Recommended",
+      "Reason": "Technology-restricting overhaul placement",
+      "RuleId": "rf.load.package.rimhammer---the-end-times",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "NameContains": "Tiberium Rim",
+      "Category": "EarlyOverhauls",
+      "Confidence": "Experimental",
+      "Reason": "Community-reported early placement",
+      "RuleId": "rf.load.package.tiberium-rim",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "NameContains": "Vanilla Hair Expanded",
+      "Category": "Items",
+      "Confidence": "Recommended",
+      "Reason": "Special placement directly above the race band",
+      "RuleId": "rf.load.package.vanilla-hair-expanded",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "NameContains": "Dubs Performance Analyzer",
+      "Category": "BottomRequired",
+      "Confidence": "Recommended",
+      "Reason": "Late patching and diagnostics placement",
+      "RuleId": "rf.load.package.dubs-performance-analyzer",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    },
+    {
+      "NameContains": "Hospitality",
+      "Category": "BottomRequired",
+      "Confidence": "Experimental",
+      "Reason": "Community-reported late placement",
+      "RuleId": "rf.load.package.hospitality",
+      "Source": "RimForge bundled community baseline",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    }
+  ],
+  "RelativeRules": [
+    {
+      "BeforePackageId": "krkr.rocketman",
+      "AfterPackageId": "vr.missilegirl",
+      "Confidence": "Hard",
+      "Reason": "Preserve RimForge canonical bottom-anchor order",
+      "RuleId": "rf.load.relative.001",
+      "Source": "RimForge canonical policy",
+      "LastReviewed": "2026-07-21",
+      "Scope": {
+        "RimWorldVersions": [
+          "1.6"
+        ]
+      }
+    }
+  ],
+  "ContentVersion": "1.0.0"
 }

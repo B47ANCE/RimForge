@@ -1,41 +1,66 @@
-# RimForge runtime and generated data
+# .NET build output
+**/bin/
+**/obj/
+artifacts/
+packages/
+_deliverables/
+
+# Test and coverage output
+TestResults/
+**/TestResults/
+*.trx
+coverage/
+coverage.*
+*.coverage
+*.coveragexml
+
+# IDE and user state
+.vs/
+.vscode/
+.idea/
+_ReSharper*/
+*.user
+*.suo
+*.userprefs
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+
+# RimForge runtime output (legacy repository-relative locations)
 Output/
 Logs/
 Cache/
-TextureWork/
-Database.Generated/
-Backups/
-Review/ClassificationReview.csv
+Temp/
+Exports/
+Snapshots/
+Sessions/
+Diagnostics/
+CrashDumps/
+GeneratedDocs/
+SteamCache/
+WorkshopCache/
+AnalysisCache/
+ForgeCache/
 
-# Downloaded third-party tools and binaries
-Tools/**/*.exe
-Tools/**/*.dll
-Tools/**/*.zip
-Tools/**/*.7z
+# Runtime and diagnostic files
+*.log
+*.dmp
+*.tmp
+*.cache
+Reports/*.json
+!Reports/.gitkeep
 
-# Local configuration overrides
-Config.local.json
-*.user.json
+# Machine-local configuration
+appsettings.Local.json
+settings.local.json
+*.local.json
 
-# PowerShell / IDE files
-.vscode/
-.vs/
-.idea/
-*.clixml
+# Patch and local recovery material
+.patch-backups/
+*.patch.zip
+*.restore.zip
 
-# OS files
+# Operating-system metadata
+.DS_Store
 Thumbs.db
 Desktop.ini
-.DS_Store
-
-# Temporary and backup files
-*.tmp
-*.temp
-*.bak
-*.backup
-*.old
-*.log
-
-# Release archives
-*.zip
-*.7z

@@ -37,7 +37,9 @@ if (-not (Test-Path -LiteralPath $moduleFolder -PathType Container)) {
 # duplicate exports and interface drift between modules.
 $moduleOrder = @(
     "ProjectValidation.psm1",
+    "RimForgePaths.psm1",
     "Logging.psm1",
+    "AuditPipeline.psm1",
     "CacheService.psm1",
     "FingerprintService.psm1",
     "IncrementalAudit.psm1",
@@ -96,91 +98,139 @@ $configValidation = Test-RimForgeConfiguration -Config $config -ScriptRoot $Scri
 if (-not $configValidation.IsValid) {
     throw ("Configuration validation failed:`n" + (@($configValidation.Errors) -join "`n"))
 }
+foreach ($warning in @($configValidation.Warnings)) {
+    Write-Warning $warning
+}
 
 # -------------------------------------------------
 # Runtime folders and logging
 # -------------------------------------------------
 
-$logFolder = Join-Path $ScriptRoot $config.LogFolder
-$outputFolder = Join-Path $ScriptRoot $config.OutputFolder
-$profilesFolder = Join-Path $ScriptRoot "Profiles"
-$optimizedFolder = Join-Path $outputFolder "OptimizedProfiles"
-$profileReportsFolder = Join-Path $outputFolder "ProfileReports"
-$cacheFolder = Join-Path $ScriptRoot $config.CacheFolder
+$paths = Initialize-RimForgePaths -RepositoryRoot $ScriptRoot -Config $config
+
+$logFolder = $paths.LogsRoot
+$outputFolder = $paths.OutputRoot
+$profilesFolder = $paths.ProfilesRoot
+$optimizedFolder = $paths.OptimizedProfilesRoot
+$profileReportsFolder = $paths.ProfileReportsRoot
+$cacheFolder = $paths.CacheRoot
 
 Initialize-Logger -LogDirectory $logFolder
 
-# Ensure the persistent Profiles folder exists. Profile source files are
-# never deleted because this folder is outside Output.
-if (-not (Test-Path -LiteralPath $profilesFolder -PathType Container)) {
-    New-Item `
-        -ItemType Directory `
-        -Path $profilesFolder `
-        -Force |
-        Out-Null
-}
 
-# Start every audit with a clean Output folder. Delete only the contents,
-# never the Output folder itself.
-if (-not (Test-Path -LiteralPath $outputFolder -PathType Container)) {
-    New-Item `
-        -ItemType Directory `
-        -Path $outputFolder `
-        -Force |
-        Out-Null
-}
-else {
-    $oldOutputItems = @(
-        Get-ChildItem `
-            -LiteralPath $outputFolder `
-            -Force `
-            -ErrorAction Stop
+# Audit conditions are collected throughout the run so recoverable failures can
+# be reported without terminating unrelated stages.
+$script:AuditConditions = @()
+$script:AuditStages = @()
+
+function Add-RimForgeAuditCondition {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet('INFO','WARNING','RECOVERABLE','FATAL')]
+        [string]$Severity,
+
+        [Parameter(Mandatory)]
+        [string]$Subsystem,
+
+        [Parameter(Mandatory)]
+        [string]$Message,
+
+        [AllowNull()]
+        [string]$Detail
     )
 
-    if (@($oldOutputItems).Count -gt 0) {
-        Write-Log INFO (
-            "Clearing {0} existing item(s) from Output." -f
-            @($oldOutputItems).Count
-        )
+    $condition = [PSCustomObject]@{
+        Timestamp = (Get-Date).ToString('o')
+        Severity  = $Severity
+        Subsystem = $Subsystem
+        Message   = $Message
+        Detail    = $Detail
+    }
 
-        foreach ($item in $oldOutputItems) {
-            Remove-Item `
-                -LiteralPath $item.FullName `
-                -Recurse `
-                -Force `
-                -ErrorAction Stop
-        }
+    $script:AuditConditions += $condition
+
+    $display = if ([string]::IsNullOrWhiteSpace($Detail)) {
+        "[{0}] {1}" -f $Subsystem, $Message
+    }
+    else {
+        "[{0}] {1} {2}" -f $Subsystem, $Message, $Detail
+    }
+
+    Write-Log $Severity $display
+    return $condition
+}
+
+function New-RimForgeDisabledTaxonomy {
+    param([string[]]$UnavailableFiles = @())
+    return [PSCustomObject]@{
+        SchemaVersion     = 2
+        AllowedCategories = @()
+        AllowedRoles      = @()
+        Entries           = @()
+        FamilyRules       = @()
+        RolePrecedence    = @()
+        TargetVersion     = $targetVersion
+        Enabled           = $false
+        UnavailableFiles  = @($UnavailableFiles)
     }
 }
 
-# Recreate generated-output subfolders after cleanup. Cache is persistent.
-foreach ($folder in @(
-    $optimizedFolder,
-    $profileReportsFolder,
-    $cacheFolder
-)) {
-    New-Item `
-        -ItemType Directory `
-        -Path $folder `
-        -Force |
-        Out-Null
+function New-RimForgeDisabledBlueprint {
+    param([string]$SourcePath)
+    return [PSCustomObject]@{
+        SchemaVersion      = 1
+        Name               = 'Blueprint analysis unavailable'
+        Description        = 'The curated load-order blueprint could not be loaded.'
+        HardRulePrecedence = $true
+        TieBreaker         = 'OriginalOrder'
+        Sections           = @([PSCustomObject]@{ Id='unclassified'; Name='Unclassified'; Order=9999; MatchScores=[PSCustomObject]@{} })
+        SourcePath         = $SourcePath
+        Enabled            = $false
+    }
 }
 
-$compatibilityRulesPath = Join-Path `
-    $ScriptRoot `
-    "CompatibilityRules.json"
+# Generated report folders are replaceable, but persistent profiles, caches,
+# user data, and databases under Output must never be deleted by an audit.
+foreach ($folder in @($optimizedFolder, $profileReportsFolder, $paths.ReportsRoot)) {
+    if (Test-Path -LiteralPath $folder -PathType Container) {
+        Get-ChildItem -LiteralPath $folder -Force -ErrorAction SilentlyContinue |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    New-Item -ItemType Directory -Path $folder -Force | Out-Null
+}
 
-$compatibilityRules = Import-CompatibilityRules `
-    -Path $compatibilityRulesPath
+$compatibilityRulesPath = Resolve-RimForgeCuratedAsset -Paths $paths -FileName 'CompatibilityRules.json'
+
+try {
+    $compatibilityRules = Import-CompatibilityRules `
+        -Path $compatibilityRulesPath
+}
+catch {
+    Add-RimForgeAuditCondition `
+        -Severity RECOVERABLE `
+        -Subsystem 'Compatibility' `
+        -Message 'Curated compatibility rules could not be loaded. Continuing without them.' `
+        -Detail $_.Exception.Message | Out-Null
+    $compatibilityRules = [PSCustomObject]@{ SchemaVersion = 1; Rules = @() }
+}
 
 Write-Log INFO (
     "Loaded {0} custom compatibility rule(s)." -f
     @($compatibilityRules.Rules).Count
 )
 
+if (-not (Test-Path -LiteralPath $compatibilityRulesPath -PathType Leaf)) {
+    Add-RimForgeAuditCondition `
+        -Severity WARNING `
+        -Subsystem 'Compatibility' `
+        -Message 'No curated compatibility rules were found. Declared incompatibilities will still be checked.' `
+        -Detail $compatibilityRulesPath | Out-Null
+}
+
 Write-Log SUCCESS "=============================================="
 Write-Log SUCCESS " RimForge v$($config.Version)"
-Write-Log INFO " Forging a stable, optimized mod ecosystem."
+Write-Log INFO " Forging stable, optimized modpack ecosystems."
 Write-Log SUCCESS "=============================================="
 Write-Log INFO "Configuration loaded."
 Write-Log INFO "Modules loaded."
@@ -190,7 +240,9 @@ Write-Log INFO "Modules loaded."
 # -------------------------------------------------
 
 Start-RimForgeTimingStage -Session $timingSession -Name 'Discovery'
-$mods = Find-RimWorldMods -RootFolders @($config.RootFolders)
+$discoveryRoots = @(Get-RimForgeDiscoveryRoots -Config $config -Paths $paths)
+if ($discoveryRoots.Count -lt 1) { Write-Log WARNING 'No valid mod roots were discovered. Continuing with an empty library.' }
+$mods = Find-RimWorldMods -RootFolders $discoveryRoots
 [void](Stop-RimForgeTimingStage -Session $timingSession -Name 'Discovery')
 
 Write-Log INFO "Discovery complete."
@@ -254,16 +306,35 @@ if (
 # Objective file evidence scan
 # -------------------------------------------------
 
-$evidenceRulesPath = Join-Path `
-    $ScriptRoot `
-    "Database\EvidenceRules.json"
+$evidenceRulesPath = Resolve-RimForgeCuratedAsset -Paths $paths -FileName 'EvidenceRules.json'
+try {
+    $evidenceRules = Import-EvidenceRules -Path $evidenceRulesPath -AllowMissing
+}
+catch {
+    Add-RimForgeAuditCondition `
+        -Severity RECOVERABLE `
+        -Subsystem 'Evidence' `
+        -Message 'PowerShell Evidence rules are invalid. Native Evidence and the remaining audit will continue.' `
+        -Detail $_.Exception.Message | Out-Null
+    $evidenceRules = [PSCustomObject]@{
+        Enabled = $false; Categories = @(); SourcePath = $evidenceRulesPath
+        UnavailableReason = $_.Exception.Message
+    }
+}
 
-$evidenceRules = Import-EvidenceRules `
-    -Path $evidenceRulesPath
-
-Write-Log INFO "Scanning mod XML, paths, and assembly metadata for objective evidence."
+if ($evidenceRules.Enabled) {
+    Write-Log INFO "Scanning mod XML, paths, and assembly metadata for objective evidence."
+}
+else {
+    Add-RimForgeAuditCondition `
+        -Severity RECOVERABLE `
+        -Subsystem 'Evidence' `
+        -Message 'Curated Evidence rules are unavailable. Continuing with native Evidence and the remaining audit.' `
+        -Detail ([string]$evidenceRules.UnavailableReason) | Out-Null
+}
 
 $evidenceCacheFolder = Join-Path $cacheFolder "Evidence"
+$evidenceReportsFolder = $paths.EvidenceReportsRoot
 $useEvidenceCache = $true
 
 if (
@@ -285,15 +356,32 @@ $trustedEvidencePackageIds = @(
 )
 
 Start-RimForgeTimingStage -Session $timingSession -Name 'EvidenceScan'
-$evidenceScan = Invoke-ModEvidenceScan `
-    -Mods @($mods) `
-    -Rules $evidenceRules `
-    -OutputFolder $outputFolder `
-    -ProgressId 20 `
-    -CacheFolder $evidenceCacheFolder `
-    -UseCache $useEvidenceCache `
-    -TrustedUnchangedPackageIds @($trustedEvidencePackageIds) `
-    -TargetVersion $targetVersion
+if ($evidenceRules.Enabled) {
+    $evidenceScan = Invoke-ModEvidenceScan `
+        -Mods @($mods) `
+        -Rules $evidenceRules `
+        -OutputFolder $evidenceReportsFolder `
+        -ProgressId 20 `
+        -CacheFolder $evidenceCacheFolder `
+        -UseCache $useEvidenceCache `
+        -TrustedUnchangedPackageIds @($trustedEvidencePackageIds) `
+        -TargetVersion $targetVersion
+}
+else {
+    $evidenceScan = [PSCustomObject]@{
+        ModCount = @($mods).Count
+        ClassifiedCount = 0
+        ReviewCount = 0
+        CacheHitCount = 0
+        ScannedCount = 0
+        CacheWriteErrorCount = 0
+        CacheFolder = $evidenceCacheFolder
+        ReportPath = $null
+        ReviewPath = $null
+        Results = @()
+        Disabled = $true
+    }
+}
 [void](Stop-RimForgeTimingStage -Session $timingSession -Name 'EvidenceScan')
 
 Write-Log INFO (
@@ -339,81 +427,188 @@ if ($dependencyGraph.CycleCount -gt 0) {
 # Discover all profiles
 # -------------------------------------------------
 
-$profiles = Find-ModsConfigProfiles `
-    -ProfilesFolder $profilesFolder
+$profiles = @(Find-ModsConfigProfiles `
+    -ProfilesFolder $profilesFolder)
+
+$profileAnalysisMode = "RimForgeProfiles"
+$profileSourceDescription = $profilesFolder
 
 if (@($profiles).Count -lt 1) {
-    throw (
-        "No valid ModsConfig profiles were found in '{0}'." -f
-        $profilesFolder
+    $localApplicationData = [Environment]::GetFolderPath(
+        [Environment+SpecialFolder]::LocalApplicationData
+    )
+    $localLow = Join-Path (Split-Path -Parent $localApplicationData) "LocalLow"
+    $liveModsConfigPath = Join-Path `
+        $localLow `
+        "Ludeon Studios\RimWorld by Ludeon Studios\Config\ModsConfig.xml"
+
+    if (Test-Path -LiteralPath $liveModsConfigPath -PathType Leaf) {
+        try {
+            $liveProfile = Import-ModsConfigProfile `
+                -Path $liveModsConfigPath `
+                -Name "Current RimWorld Profile"
+
+            $hasCore = @($liveProfile.NormalizedIds) -contains "ludeon.rimworld"
+
+            if ($liveProfile.Count -gt 0 -and $hasCore) {
+                $profiles = @($liveProfile)
+                $profileAnalysisMode = "LiveModsConfig"
+                $profileSourceDescription = $liveModsConfigPath
+
+                Write-Log WARNING (
+                    "No RimForge profile was available. Using RimWorld's current ModsConfig.xml instead: {0}" -f
+                    $liveModsConfigPath
+                )
+            }
+        }
+        catch {
+            Write-Log WARNING (
+                "RimWorld's current ModsConfig.xml could not be loaded: {0}" -f
+                $_.Exception.Message
+            )
+        }
+    }
+}
+
+if (@($profiles).Count -lt 1) {
+    $profiles = @()
+    $profileAnalysisMode = "LibraryOnly"
+    $profileSourceDescription = $null
+
+    Add-RimForgeAuditCondition `
+        -Severity RECOVERABLE `
+        -Subsystem 'Profiles' `
+        -Message 'No active profile was found. Continuing with library-wide analysis.' `
+        -Detail 'Profile validation, compatibility, optimization, and comparison were skipped.' | Out-Null
+}
+else {
+    Write-Log SUCCESS (
+        "Discovered {0} valid profile(s)." -f
+        @($profiles).Count
     )
 }
 
-Write-Log SUCCESS (
-    "Discovered {0} valid profile(s)." -f
-    @($profiles).Count
-)
+$loadOrderRulesPath = Resolve-RimForgeCuratedAsset -Paths $paths -FileName 'LoadOrderRules.json'
 
-$loadOrderRulesPath = Join-Path `
-    $ScriptRoot `
-    "Database\LoadOrderRules.json"
-
-$loadOrderKnowledge = Import-LoadOrderKnowledgeRules `
-    -Path $loadOrderRulesPath `
-    -TargetVersion $targetVersion
+try {
+    $loadOrderKnowledge = Import-LoadOrderKnowledgeRules `
+        -Path $loadOrderRulesPath `
+        -TargetVersion $targetVersion
+}
+catch {
+    Add-RimForgeAuditCondition `
+        -Severity RECOVERABLE `
+        -Subsystem 'LoadOrder' `
+        -Message 'Curated load-order rules could not be loaded. Optimization will use declared dependencies only.' `
+        -Detail $_.Exception.Message | Out-Null
+    $loadOrderKnowledge = [PSCustomObject]@{ SchemaVersion = 1; Rules = @(); SourcePath = $loadOrderRulesPath }
+}
 
 Write-Log INFO (
     "Loaded {0} curated load-order rule(s)." -f
     @($loadOrderKnowledge.Rules).Count
 )
 
-$taxonomyPath = Join-Path `
-    $ScriptRoot `
-    "Database\ModTaxonomy.json"
-
-$taxonomyRulesPath = Join-Path `
-    $ScriptRoot `
-    "Database\TaxonomyRules.json"
-
-$familyRulesPath = Join-Path `
-    $ScriptRoot `
-    "Database\FamilyRules.json"
-
-$modTaxonomy = Import-ModTaxonomyDatabase `
-    -TaxonomyPath $taxonomyPath `
-    -RulesPath $taxonomyRulesPath `
-    -FamilyRulesPath $familyRulesPath `
-    -TargetVersion $targetVersion
-
-$taxonomyValidation = Test-ModTaxonomyDatabase `
-    -Database $modTaxonomy `
-    -InstalledMods @($mods)
-
-Write-Log INFO (
-    "Taxonomy database: explicit={0}, family rules={1}, errors={2}, warnings={3}" -f
-    $taxonomyValidation.ExplicitEntryCount,
-    $taxonomyValidation.FamilyRuleCount,
-    $taxonomyValidation.ErrorCount,
-    $taxonomyValidation.WarningCount
-)
-
-if (-not $taxonomyValidation.IsValid) {
-    throw "Mod taxonomy database validation failed."
+if (-not (Test-Path -LiteralPath $loadOrderRulesPath -PathType Leaf)) {
+    Add-RimForgeAuditCondition `
+        -Severity WARNING `
+        -Subsystem 'LoadOrder' `
+        -Message 'No curated load-order rules were found. Declared dependencies will remain authoritative.' `
+        -Detail $loadOrderRulesPath | Out-Null
 }
 
-$blueprintPath = Join-Path `
-    $ScriptRoot `
-    "Database\LoadOrderBlueprint.json"
+$taxonomyPath = Resolve-RimForgeCuratedAsset -Paths $paths -FileName 'ModTaxonomy.json'
 
-$loadOrderBlueprint = Import-LoadOrderBlueprint `
-    -Path $blueprintPath
+$taxonomyRulesPath = Resolve-RimForgeCuratedAsset -Paths $paths -FileName 'TaxonomyRules.json'
 
-$blueprintOverridesPath = Join-Path `
-    $ScriptRoot `
-    "Database\BlueprintOverrides.json"
+$familyRulesPath = Resolve-RimForgeCuratedAsset -Paths $paths -FileName 'FamilyRules.json'
 
-$blueprintOverrides = Import-BlueprintOverrides `
-    -Path $blueprintOverridesPath
+try {
+    $modTaxonomy = Import-ModTaxonomyDatabase `
+        -TaxonomyPath $taxonomyPath `
+        -RulesPath $taxonomyRulesPath `
+        -FamilyRulesPath $familyRulesPath `
+        -TargetVersion $targetVersion
+
+    $taxonomyValidation = Test-ModTaxonomyDatabase `
+        -Database $modTaxonomy `
+        -InstalledMods @($mods)
+
+    Write-Log INFO (
+        "Taxonomy database: explicit={0}, family rules={1}, errors={2}, warnings={3}" -f
+        $taxonomyValidation.ExplicitEntryCount,
+        $taxonomyValidation.FamilyRuleCount,
+        $taxonomyValidation.ErrorCount,
+        $taxonomyValidation.WarningCount
+    )
+
+    if (-not $taxonomyValidation.IsValid) {
+        Add-RimForgeAuditCondition `
+            -Severity RECOVERABLE `
+            -Subsystem 'Taxonomy' `
+            -Message 'The curated taxonomy contains validation errors. Taxonomy and blueprint analysis were disabled for this run.' `
+            -Detail ("{0} validation error(s)." -f $taxonomyValidation.ErrorCount) | Out-Null
+        $modTaxonomy = New-RimForgeDisabledTaxonomy
+    }
+}
+catch {
+    Add-RimForgeAuditCondition `
+        -Severity RECOVERABLE `
+        -Subsystem 'Taxonomy' `
+        -Message 'The curated taxonomy could not be loaded. Taxonomy and blueprint analysis were disabled for this run.' `
+        -Detail $_.Exception.Message | Out-Null
+    $modTaxonomy = New-RimForgeDisabledTaxonomy -UnavailableFiles @($taxonomyPath,$taxonomyRulesPath,$familyRulesPath)
+    $taxonomyValidation = [PSCustomObject]@{
+        ExplicitEntryCount = 0; FamilyRuleCount = 0; ErrorCount = 0; WarningCount = 0
+        Errors = @(); Warnings = @(); IsValid = $true; Disabled = $true
+    }
+}
+
+if ($modTaxonomy.PSObject.Properties.Name -contains 'Enabled' -and -not [bool]$modTaxonomy.Enabled) {
+    Add-RimForgeAuditCondition `
+        -Severity RECOVERABLE `
+        -Subsystem 'Taxonomy' `
+        -Message 'Curated taxonomy data is unavailable. Taxonomy and blueprint classification will be limited.' `
+        -Detail ((@($modTaxonomy.UnavailableFiles) -join '; ')) | Out-Null
+}
+
+$blueprintPath = Resolve-RimForgeCuratedAsset -Paths $paths -FileName 'LoadOrderBlueprint.json'
+
+try {
+    $loadOrderBlueprint = Import-LoadOrderBlueprint `
+        -Path $blueprintPath
+}
+catch {
+    Add-RimForgeAuditCondition `
+        -Severity RECOVERABLE `
+        -Subsystem 'Blueprint' `
+        -Message 'The curated load-order blueprint could not be loaded. Blueprint scoring was disabled.' `
+        -Detail $_.Exception.Message | Out-Null
+    $loadOrderBlueprint = New-RimForgeDisabledBlueprint -SourcePath $blueprintPath
+}
+
+if ($loadOrderBlueprint.PSObject.Properties.Name -contains 'Enabled' -and -not [bool]$loadOrderBlueprint.Enabled) {
+    Add-RimForgeAuditCondition `
+        -Severity RECOVERABLE `
+        -Subsystem 'Blueprint' `
+        -Message 'Curated blueprint data is unavailable. Blueprint scoring will be skipped.' `
+        -Detail $blueprintPath | Out-Null
+}
+
+$blueprintOverridesPath = Resolve-RimForgeCuratedAsset -Paths $paths -FileName 'BlueprintOverrides.json'
+
+try {
+    $blueprintOverrides = Import-BlueprintOverrides `
+        -Path $blueprintOverridesPath
+}
+catch {
+    Add-RimForgeAuditCondition `
+        -Severity RECOVERABLE `
+        -Subsystem 'Blueprint' `
+        -Message 'Blueprint overrides could not be loaded. Continuing without overrides.' `
+        -Detail $_.Exception.Message | Out-Null
+    $blueprintOverrides = [PSCustomObject]@{ SchemaVersion = 1; Overrides = @(); SourcePath = $blueprintOverridesPath }
+}
 
 Write-Log INFO (
     "Loaded load-order blueprint with {0} section(s) and {1} override(s)." -f
@@ -437,18 +632,33 @@ Write-Log INFO (
     $externalTimeoutSeconds
 )
 
-$versionStatus = Test-ModVersionStatus `
-    -Mods @($mods) `
-    -TargetVersion $targetVersion `
-    -CacheFolder $cacheFolder `
-    -CacheHours 24 `
-    -ExternalTimeoutSeconds $externalTimeoutSeconds
+try {
+    $versionStatus = Test-ModVersionStatus `
+        -Mods @($mods) `
+        -TargetVersion $targetVersion `
+        -CacheFolder $cacheFolder `
+        -CacheHours 24 `
+        -ExternalTimeoutSeconds $externalTimeoutSeconds
+}
+catch {
+    Add-RimForgeAuditCondition `
+        -Severity RECOVERABLE `
+        -Subsystem 'VersionStatus' `
+        -Message 'Version and Workshop status checks could not be completed. Continuing without version enrichment.' `
+        -Detail $_.Exception.Message | Out-Null
+    $versionStatus = [PSCustomObject]@{
+        Mods = @(); NativeSupportCount = 0; NoVersionWarningCount = 0
+        UnsupportedUnknownCount = 0; WorkshopUnavailableCount = 0
+        PossiblyStaleCount = 0; ExternalChecksSkipped = $true; Disabled = $true
+    }
+}
 
 if ($versionStatus.ExternalChecksSkipped) {
-    Write-Log WARNING (
-        "One or more external database checks timed out or were unavailable. " +
-        "Cached data was used when available; remaining online checks were skipped."
-    )
+    Add-RimForgeAuditCondition `
+        -Severity WARNING `
+        -Subsystem 'VersionStatus' `
+        -Message 'One or more external checks timed out or were unavailable.' `
+        -Detail 'Cached data was used when available; remaining online checks were skipped.' | Out-Null
 }
 
 Write-Log INFO (
@@ -467,6 +677,7 @@ Write-Log INFO (
 $profileResults = @()
 
 foreach ($profile in @($profiles)) {
+    try {
     Write-Log INFO (
         "Processing profile '{0}' ({1} mods)." -f
         $profile.Name,
@@ -541,6 +752,15 @@ foreach ($profile in @($profiles)) {
         $compatibility.TotalCount,
         $optimization.MoveCount
     )
+
+    }
+    catch {
+        Add-RimForgeAuditCondition `
+            -Severity RECOVERABLE `
+            -Subsystem 'Profiles' `
+            -Message ("Profile '{0}' could not be fully analyzed; remaining profiles will continue." -f $profile.Name) `
+            -Detail $_.Exception.Message | Out-Null
+    }
 }
 
 $profileVersionSummaries = @(
@@ -549,11 +769,27 @@ $profileVersionSummaries = @(
     }
 )
 
-Write-VersionStatusReports `
-    -VersionStatus $versionStatus `
-    -ProfileSummaries @($profileVersionSummaries) `
-    -OutputFolder $outputFolder |
-    Out-Null
+$versionReportStage = Invoke-RimForgeAuditStage `
+    -Name 'Write version-status reports' `
+    -Subsystem 'VersionStatus' `
+    -FailureSeverity RECOVERABLE `
+    -FailureMessage 'Version-status reports could not be written. Continuing with the remaining audit outputs.' `
+    -FallbackValue $null `
+    -OnFailure {
+        param($stageError)
+        Add-RimForgeAuditCondition `
+            -Severity RECOVERABLE `
+            -Subsystem 'VersionStatus' `
+            -Message 'Version-status reports could not be written. Continuing with the remaining audit outputs.' `
+            -Detail $stageError.Exception.Message | Out-Null
+    } `
+    -Action {
+        Write-VersionStatusReports `
+            -VersionStatus $versionStatus `
+            -ProfileSummaries @($profileVersionSummaries) `
+            -OutputFolder $paths.ReportsRoot
+    }
+$script:AuditStages += $versionReportStage
 
 $profileTaxonomySummaries = @(
     foreach ($result in @($profileResults)) {
@@ -561,21 +797,28 @@ $profileTaxonomySummaries = @(
     }
 )
 
-Write-TaxonomyReports `
-    -Validation $taxonomyValidation `
-    -ProfileSummaries @($profileTaxonomySummaries) `
-    -OutputFolder $outputFolder |
-    Out-Null
+$taxonomyReportStage = Invoke-RimForgeAuditStage `
+    -Name 'Write taxonomy reports' `
+    -Subsystem 'Taxonomy' `
+    -FailureSeverity RECOVERABLE `
+    -FailureMessage 'Taxonomy reports could not be written. Continuing with the remaining audit outputs.' `
+    -FallbackValue $null `
+    -OnFailure {
+        param($stageError)
+        Add-RimForgeAuditCondition `
+            -Severity RECOVERABLE `
+            -Subsystem 'Taxonomy' `
+            -Message 'Taxonomy reports could not be written. Continuing with the remaining audit outputs.' `
+            -Detail $stageError.Exception.Message | Out-Null
+    } `
+    -Action {
+        Write-TaxonomyReports `
+            -Validation $taxonomyValidation `
+            -ProfileSummaries @($profileTaxonomySummaries) `
+            -OutputFolder $paths.ReportsRoot
+    }
+$script:AuditStages += $taxonomyReportStage
 
-foreach ($summary in @($profileTaxonomySummaries)) {
-    Write-Log INFO (
-        "{0}: taxonomy coverage {1}% ({2}/{3})" -f
-        $summary.ProfileName,
-        $summary.CoveragePercent,
-        $summary.ClassifiedCount,
-        $summary.ActiveModCount
-    )
-}
 
 $profileBlueprintResults = @(
     foreach ($result in @($profileResults)) {
@@ -583,56 +826,39 @@ $profileBlueprintResults = @(
     }
 )
 
-Write-BlueprintReports `
-    -Blueprint $loadOrderBlueprint `
-    -ProfileBlueprintResults @($profileBlueprintResults) `
-    -OutputFolder $outputFolder |
-    Out-Null
+$blueprintReportStage = Invoke-RimForgeAuditStage `
+    -Name 'Write blueprint reports' `
+    -Subsystem 'Blueprint' `
+    -FailureSeverity RECOVERABLE `
+    -FailureMessage 'Blueprint reports could not be written. Continuing with the remaining audit outputs.' `
+    -FallbackValue $null `
+    -OnFailure {
+        param($stageError)
+        Add-RimForgeAuditCondition `
+            -Severity RECOVERABLE `
+            -Subsystem 'Blueprint' `
+            -Message 'Blueprint reports could not be written. Continuing with the remaining audit outputs.' `
+            -Detail $stageError.Exception.Message | Out-Null
+    } `
+    -Action {
+        Write-BlueprintReports `
+            -Blueprint $loadOrderBlueprint `
+            -ProfileBlueprintResults @($profileBlueprintResults) `
+            -OutputFolder $paths.ReportsRoot
+    }
+$script:AuditStages += $blueprintReportStage
 
-foreach ($result in @($profileBlueprintResults)) {
-    Write-Log INFO (
-        "{0}: blueprint score {1}% with {2} minimal section move(s)." -f
-        $result.ProfileName,
-        $result.BlueprintScore,
-        $result.MinimalMoveCount
-    )
-}
 
 # -------------------------------------------------
 # Build persistent GitHub-ready generated database
 # -------------------------------------------------
 
 $databaseBuilderEnabled = $true
-$generatedDatabaseFolder = Join-Path `
-    $ScriptRoot `
-    "Database.Generated"
+$generatedDatabaseFolder = $paths.GeneratedDatabaseRoot
 
-if ($config.PSObject.Properties.Name -contains "DatabaseBuilder") {
-    if (
-        $config.DatabaseBuilder.PSObject.Properties.Name -contains
-        "Enabled"
-    ) {
-        $databaseBuilderEnabled = [bool]$config.DatabaseBuilder.Enabled
-    }
-
-    if (
-        $config.DatabaseBuilder.PSObject.Properties.Name -contains
-        "OutputFolder" -and
-        -not [string]::IsNullOrWhiteSpace(
-            [string]$config.DatabaseBuilder.OutputFolder
-        )
-    ) {
-        $configuredDatabaseFolder = [string]$config.DatabaseBuilder.OutputFolder
-
-        if ([System.IO.Path]::IsPathRooted($configuredDatabaseFolder)) {
-            $generatedDatabaseFolder = $configuredDatabaseFolder
-        }
-        else {
-            $generatedDatabaseFolder = Join-Path `
-                $ScriptRoot `
-                $configuredDatabaseFolder
-        }
-    }
+if ($config.PSObject.Properties.Name -contains "DatabaseBuilder" -and
+    $config.DatabaseBuilder.PSObject.Properties.Name -contains "Enabled") {
+    $databaseBuilderEnabled = [bool]$config.DatabaseBuilder.Enabled
 }
 
 $databaseBuild = $null
@@ -643,35 +869,47 @@ if ($databaseBuilderEnabled) {
         $generatedDatabaseFolder
     )
 
-    $databaseBuild = Export-RimForgeGeneratedDatabase `
-        -Mods @($mods) `
-        -EvidenceScan $evidenceScan `
-        -VersionStatus $versionStatus `
-        -TaxonomyDatabase $modTaxonomy `
-        -DatabaseRoot $generatedDatabaseFolder `
-        -TargetVersion $targetVersion `
-        -ScannerVersion ([string]$config.Version) `
-        -ProgressId 40
+    try {
+        $databaseBuild = Export-RimForgeGeneratedDatabase `
+            -Mods @($mods) `
+            -EvidenceScan $evidenceScan `
+            -VersionStatus $versionStatus `
+            -TaxonomyDatabase $modTaxonomy `
+            -DatabaseRoot $generatedDatabaseFolder `
+            -TargetVersion $targetVersion `
+            -ScannerVersion ([string]$config.Version) `
+            -ProgressId 40
 
-    $databaseValidation = Test-RimForgeGeneratedDatabase `
-        -DatabaseRoot $generatedDatabaseFolder
+        $databaseValidation = Test-RimForgeGeneratedDatabase `
+            -DatabaseRoot $generatedDatabaseFolder
 
-    if (-not $databaseValidation.IsValid) {
-        foreach ($errorMessage in @($databaseValidation.Errors)) {
-            Write-Log ERROR $errorMessage
+        if (-not $databaseValidation.IsValid) {
+            Add-RimForgeAuditCondition `
+                -Severity RECOVERABLE `
+                -Subsystem 'GeneratedDatabase' `
+                -Message 'Generated database validation failed. Audit reports remain available, but the generated database was not accepted.' `
+                -Detail ((@($databaseValidation.Errors) -join ' ')) | Out-Null
+            $databaseBuild = $null
         }
-
-        throw "Generated database validation failed."
+        else {
+            Write-Log SUCCESS (
+                "Generated database: records={0}, written={1}, unchanged={2}, review={3}, quarantine={4}" -f
+                $databaseBuild.RecordCount,
+                $databaseBuild.WrittenCount,
+                $databaseBuild.UnchangedCount,
+                $databaseBuild.ReviewCount,
+                $databaseBuild.QuarantineCount
+            )
+        }
     }
-
-    Write-Log SUCCESS (
-        "Generated database: records={0}, written={1}, unchanged={2}, review={3}, quarantine={4}" -f
-        $databaseBuild.RecordCount,
-        $databaseBuild.WrittenCount,
-        $databaseBuild.UnchangedCount,
-        $databaseBuild.ReviewCount,
-        $databaseBuild.QuarantineCount
-    )
+    catch {
+        Add-RimForgeAuditCondition `
+            -Severity RECOVERABLE `
+            -Subsystem 'GeneratedDatabase' `
+            -Message 'Generated database construction failed. Core audit reports remain available.' `
+            -Detail $_.Exception.Message | Out-Null
+        $databaseBuild = $null
+    }
 }
 else {
     Write-Log INFO "Generated database builder is disabled."
@@ -684,49 +922,88 @@ else {
 $profileSetComparison = $null
 
 if (@($profiles).Count -gt 1) {
-    $profileSetComparison = Compare-ProfileSet `
-        -Profiles @($profiles)
+    $profileComparisonStage = Invoke-RimForgeAuditStage `
+        -Name 'Compare profile set' `
+        -Subsystem 'Profiles' `
+        -FailureSeverity RECOVERABLE `
+        -FailureMessage 'Cross-profile comparison could not be completed. Continuing with global reports.' `
+        -FallbackValue $null `
+        -OnFailure {
+            param($stageError)
+            Add-RimForgeAuditCondition `
+                -Severity RECOVERABLE `
+                -Subsystem 'Profiles' `
+                -Message 'Cross-profile comparison could not be completed. Continuing with global reports.' `
+                -Detail $stageError.Exception.Message | Out-Null
+        } `
+        -Action {
+            $comparison = Compare-ProfileSet -Profiles @($profiles)
+            Write-ProfileSetReports `
+                -Comparison $comparison `
+                -ProfileResults @($profileResults) `
+                -OutputFolder $paths.ReportsRoot | Out-Null
+            $comparison
+        }
+    $script:AuditStages += $profileComparisonStage
+    $profileSetComparison = $profileComparisonStage.Value
 
-    Write-ProfileSetReports `
-        -Comparison $profileSetComparison `
-        -ProfileResults @($profileResults) `
-        -OutputFolder $outputFolder |
-        Out-Null
-
-    Write-Log SUCCESS "Profile-set comparison complete."
-    Write-Log INFO (
-        "Mods shared across every profile: {0}" -f
-        $profileSetComparison.SharedAcrossAllCount
-    )
-
-    foreach ($unique in @($profileSetComparison.UniqueByProfile)) {
+    if ($null -ne $profileSetComparison) {
+        Write-Log SUCCESS "Profile-set comparison complete."
         Write-Log INFO (
-            "{0} unique mods: {1}" -f
-            $unique.ProfileName,
-            $unique.Count
+            "Mods shared across every profile: {0}" -f
+            $profileSetComparison.SharedAcrossAllCount
         )
+
+        foreach ($unique in @($profileSetComparison.UniqueByProfile)) {
+            Write-Log INFO (
+                "{0} unique mods: {1}" -f
+                $unique.ProfileName,
+                $unique.Count
+            )
+        }
     }
 }
+elseif (@($profiles).Count -eq 1) {
+    Write-Log INFO "Cross-profile comparison skipped: only one profile is available."
+}
 else {
-    Write-Log INFO "Only one profile was found; cross-profile comparison skipped."
+    Write-Log INFO "Cross-profile comparison skipped: no profile set is available in library analysis mode."
 }
 
 # -------------------------------------------------
 # Global audit report
 # -------------------------------------------------
 
-Write-AuditReport `
-    -Mods @($mods) `
-    -Validation $validation `
-    -DependencyGraph $dependencyGraph `
-    -OutputFolder $outputFolder `
-    -Version $config.Version |
-    Out-Null
+$globalReportStage = Invoke-RimForgeAuditStage `
+    -Name 'Write global audit report' `
+    -Subsystem 'Reports' `
+    -FailureSeverity RECOVERABLE `
+    -FailureMessage 'The global audit report could not be written. Other completed reports remain available.' `
+    -FallbackValue $null `
+    -OnFailure {
+        param($stageError)
+        Add-RimForgeAuditCondition `
+            -Severity RECOVERABLE `
+            -Subsystem 'Reports' `
+            -Message 'The global audit report could not be written. Other completed reports remain available.' `
+            -Detail $stageError.Exception.Message | Out-Null
+    } `
+    -Action {
+        Write-AuditReport `
+            -Mods @($mods) `
+            -Validation $validation `
+            -DependencyGraph $dependencyGraph `
+            -OutputFolder $paths.ReportsRoot `
+            -Version $config.Version
+    }
+$script:AuditStages += $globalReportStage
 
 # Optional combined summary for the refactored pipeline.
 $pipelineSummary = [PSCustomObject]@{
     Generated            = (Get-Date).ToString("o")
     ProfileCount         = @($profiles).Count
+    ProfileAnalysisMode  = $profileAnalysisMode
+    ProfileSource        = $profileSourceDescription
     Profiles             = @($profileResults)
     ProfileSetComparison = $profileSetComparison
     EvidenceScan         = [PSCustomObject]@{
@@ -740,6 +1017,13 @@ $pipelineSummary = [PSCustomObject]@{
         ReviewPath      = $evidenceScan.ReviewPath
     }
     DatabaseBuild        = $databaseBuild
+    Conditions           = @($script:AuditConditions)
+    Stages               = @($script:AuditStages)
+    ConditionSummary     = [PSCustomObject]@{
+        WarningCount     = @($script:AuditConditions | Where-Object Severity -eq 'WARNING').Count
+        RecoverableCount = @($script:AuditConditions | Where-Object Severity -eq 'RECOVERABLE').Count
+        FatalCount       = @($script:AuditConditions | Where-Object Severity -eq 'FATAL').Count
+    }
 }
 
 $timingSummary = Complete-RimForgeTimingSession -Session $timingSession
@@ -765,13 +1049,108 @@ $pipelineSummary | Add-Member -NotePropertyName Incremental -NotePropertyValue $
 $pipelineSummary |
     ConvertTo-Json -Depth 20 |
     Set-Content `
-        -LiteralPath (Join-Path $outputFolder "ProfilePipeline.json") `
+        -LiteralPath (Join-Path $paths.ReportsRoot "ProfilePipeline.json") `
+        -Encoding UTF8
+
+[PSCustomObject]@{
+    Generated = (Get-Date).ToString('o')
+    Summary = $pipelineSummary.ConditionSummary
+    Conditions = @($script:AuditConditions)
+} |
+    ConvertTo-Json -Depth 10 |
+    Set-Content `
+        -LiteralPath (Join-Path $paths.ReportsRoot 'AuditConditions.json') `
+        -Encoding UTF8
+
+[PSCustomObject]@{
+    Generated = (Get-Date).ToString('o')
+    Stages = @($script:AuditStages | ForEach-Object {
+        [PSCustomObject]@{
+            Name = $_.Name
+            Subsystem = $_.Subsystem
+            Status = $_.Status
+            Started = $_.Started
+            Completed = $_.Completed
+            ElapsedMilliseconds = $_.ElapsedMilliseconds
+            Error = $_.Error
+        }
+    })
+} |
+    ConvertTo-Json -Depth 8 |
+    Set-Content `
+        -LiteralPath (Join-Path $paths.ReportsRoot 'AuditStages.json') `
         -Encoding UTF8
 
 $incrementalRunSummary |
     ConvertTo-Json -Depth 20 |
-    Set-Content -LiteralPath (Join-Path $outputFolder 'IncrementalAudit.json') -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $paths.ReportsRoot 'IncrementalAudit.json') -Encoding UTF8
 
-Write-Log INFO ("Incremental savings: skipped About.xml={0}, skipped evidence scans={1}." -f $aboutImport.CacheHitCount,$evidenceScan.CacheHitCount)
-Write-Log INFO ("Audit timing: total={0:N2}s, discovery={1:N2}s, fingerprint={2:N2}s, about={3:N2}s, evidence={4:N2}s." -f ($timingSummary.TotalMilliseconds/1000),($timingSummary.Stages.Discovery/1000),($timingSummary.Stages.Fingerprinting/1000),($timingSummary.Stages.AboutMetadata/1000),($timingSummary.Stages.EvidenceScan/1000))
-Write-Log SUCCESS "Startup complete."
+Write-Log INFO ("Incremental cache: {0} About.xml record(s) reused; {1} Evidence result(s) reused." -f $aboutImport.CacheHitCount,$evidenceScan.CacheHitCount)
+Write-Log INFO ("Forge timing: {0:N2}s total (discovery {1:N2}s, fingerprinting {2:N2}s, metadata {3:N2}s, Evidence {4:N2}s)." -f ($timingSummary.TotalMilliseconds/1000),($timingSummary.Stages.Discovery/1000),($timingSummary.Stages.Fingerprinting/1000),($timingSummary.Stages.AboutMetadata/1000),($timingSummary.Stages.EvidenceScan/1000))
+$recoverableConditions = @($script:AuditConditions | Where-Object Severity -eq 'RECOVERABLE')
+$warningConditions = @($script:AuditConditions | Where-Object Severity -eq 'WARNING')
+$fatalConditions = @($script:AuditConditions | Where-Object Severity -eq 'FATAL')
+$recoverableCount = $recoverableConditions.Count
+$warningConditionCount = $warningConditions.Count
+$fatalConditionCount = $fatalConditions.Count
+$completedStageCount = @($script:AuditStages | Where-Object Status -eq 'Completed').Count
+$nonCompletedStageCount = @($script:AuditStages | Where-Object Status -ne 'Completed').Count
+$totalSeconds = [math]::Round($timingSummary.TotalMilliseconds / 1000, 2)
+
+$forgeResult = if ($fatalConditionCount -gt 0) {
+    'Failed'
+}
+elseif (($recoverableCount + $warningConditionCount) -gt 0) {
+    'CompletedWithConditions'
+}
+else {
+    'Completed'
+}
+
+$forgeSummary = [PSCustomObject]@{
+    Generated = (Get-Date).ToString('o')
+    Result = $forgeResult
+    AnalysisMode = $profileAnalysisMode
+    ModsAnalyzed = @($mods).Count
+    ProfilesAnalyzed = @($profileResults).Count
+    DurationSeconds = $totalSeconds
+    CompletedStages = $completedStageCount
+    NonCompletedStages = $nonCompletedStageCount
+    WarningCount = $warningConditionCount
+    RecoverableCount = $recoverableCount
+    FatalCount = $fatalConditionCount
+    Conditions = @($script:AuditConditions | ForEach-Object {
+        [PSCustomObject]@{
+            Severity = $_.Severity
+            Subsystem = $_.Subsystem
+            Message = $_.Message
+        }
+    })
+}
+
+$forgeSummary |
+    ConvertTo-Json -Depth 10 |
+    Set-Content -LiteralPath (Join-Path $paths.ReportsRoot 'ForgeSummary.json') -Encoding UTF8
+
+Write-Log SUCCESS 'Forge Complete'
+Write-Log INFO ("Analyzed {0} installed mod(s) in {1:N2} seconds." -f @($mods).Count, $totalSeconds)
+Write-Log INFO ("Stages: {0} completed, {1} completed with a non-success outcome." -f $completedStageCount, $nonCompletedStageCount)
+
+if ($profileAnalysisMode -eq 'LibraryOnly') {
+    Write-Log RECOVERABLE 'No usable profile was available. Profile-specific analysis was skipped; library analysis completed.'
+}
+
+if (($recoverableCount + $warningConditionCount + $fatalConditionCount) -eq 0) {
+    Write-Log SUCCESS 'No audit conditions require attention.'
+}
+else {
+    Write-Log WARNING ("Conditions: {0} recoverable, {1} warning, {2} fatal." -f $recoverableCount, $warningConditionCount, $fatalConditionCount)
+    foreach ($condition in @($script:AuditConditions | Select-Object -First 5)) {
+        Write-Log $condition.Severity ("[{0}] {1}" -f $condition.Subsystem, $condition.Message)
+    }
+    if (@($script:AuditConditions).Count -gt 5) {
+        Write-Log INFO ("{0} additional condition(s) are listed in AuditConditions.json." -f (@($script:AuditConditions).Count - 5))
+    }
+}
+
+Write-Log INFO 'Detailed results are available in Output\Reports.'

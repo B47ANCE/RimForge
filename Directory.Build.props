@@ -1,0 +1,22 @@
+<Project>
+  <PropertyGroup>
+    <Version>2.2.0-alpha.60</Version>
+    <Company>RimForge</Company>
+    <Authors>RimForge Contributors</Authors>
+    <Product>RimForge</Product>
+    <RepositoryUrl>https://github.com/RimForge/RimForge</RepositoryUrl>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <DebugType>portable</DebugType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+</Project>

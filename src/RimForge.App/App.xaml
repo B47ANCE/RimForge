@@ -1,0 +1,23 @@
+<Application x:Class="RimForge.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/RimForge.UI;component/Themes/Generic.xaml"/>
+        <ResourceDictionary Source="Themes/WorkstationChrome.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+      <!-- Feature views are compiled as independent UserControls, so shared
+           converters must live at application scope rather than Window scope. -->
+      <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+      <Style x:Key="PersistentForgeScrollBarStyle"
+             TargetType="{x:Type ScrollBar}"
+             BasedOn="{StaticResource {x:Type ScrollBar}}">
+        <Setter Property="Tag" Value="Persistent"/>
+        <Setter Property="Margin" Value="0,3,0,3"/>
+      </Style>
+
+    </ResourceDictionary>
+  </Application.Resources>
+</Application>

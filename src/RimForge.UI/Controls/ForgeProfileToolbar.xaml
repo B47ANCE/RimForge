@@ -1,0 +1,138 @@
+<UserControl x:Class="RimForge.UI.Controls.ForgeProfileToolbar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:RimForge.UI.Controls"
+             x:Name="Root">
+  <UserControl.Resources>
+    <Style x:Key="ProfileActionButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+      <Setter Property="Width" Value="36"/>
+      <Setter Property="Height" Value="32"/>
+      <Setter Property="Padding" Value="7"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+    <Style x:Key="ProfileActionLabel" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="9"/>
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="0,3,0,0"/>
+    </Style>
+  </UserControl.Resources>
+
+  <StackPanel Orientation="Horizontal">
+    <StackPanel Width="48" Margin="0,0,4,0">
+      <Button Style="{StaticResource ProfileActionButton}" ToolTip="Create Profile&#x0a;Create a new empty profile." Click="Create_Click">
+        <local:ForgeIcon Kind="Add" IconBrush="{DynamicResource TextPrimaryBrush}"/>
+      </Button>
+      <TextBlock Text="Create" Style="{StaticResource ProfileActionLabel}"/>
+    </StackPanel>
+    <StackPanel Width="48" Margin="0,0,4,0">
+      <Button Style="{StaticResource ProfileActionButton}" Click="Favorite_Click">
+        <Button.ToolTip>
+          <TextBlock TextWrapping="Wrap" MaxWidth="260">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Setter Property="Text" Value="Favorite Profile&#x0a;Favorites appear first in the profile selector."/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding IsFavorite, ElementName=Root}" Value="True">
+                    <Setter Property="Text" Value="Unfavorite Profile&#x0a;Remove this profile from the favorites group."/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+        </Button.ToolTip>
+        <local:ForgeIcon Kind="Favorite">
+          <local:ForgeIcon.Style>
+            <Style TargetType="local:ForgeIcon">
+              <Setter Property="IconBrush" Value="{DynamicResource TextPrimaryBrush}"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsFavorite, ElementName=Root}" Value="True">
+                  <Setter Property="IconBrush" Value="#F4B942"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </local:ForgeIcon.Style>
+        </local:ForgeIcon>
+      </Button>
+      <TextBlock Text="Favorite" Style="{StaticResource ProfileActionLabel}"/>
+    </StackPanel>
+    <StackPanel Width="48" Margin="0,0,4,0">
+      <Button Style="{StaticResource ProfileActionButton}" ToolTip="Rename Profile" IsEnabled="{Binding CanRename, ElementName=Root}" Click="Rename_Click">
+        <local:ForgeIcon Kind="Rename" IconBrush="{DynamicResource TextPrimaryBrush}"/>
+      </Button>
+      <TextBlock Text="Rename" Style="{StaticResource ProfileActionLabel}"/>
+    </StackPanel>
+    <StackPanel Width="48" Margin="0,0,4,0">
+      <Button Style="{StaticResource ProfileActionButton}" ToolTip="Open Profile&#x0a;Open the selected profile workspace." Click="Open_Click">
+        <local:ForgeIcon Kind="OpenFolder" IconBrush="{DynamicResource TextPrimaryBrush}"/>
+      </Button>
+      <TextBlock Text="Open" Style="{StaticResource ProfileActionLabel}"/>
+    </StackPanel>
+    <StackPanel Width="48" Margin="0,0,4,0">
+      <Button Style="{StaticResource ProfileActionButton}" ToolTip="Import Profile&#x0a;Import ModsConfig.xml or a RimForge JSON profile." Click="Import_Click">
+        <local:ForgeIcon Kind="Import" IconBrush="{DynamicResource TextPrimaryBrush}"/>
+      </Button>
+      <TextBlock Text="Import" Style="{StaticResource ProfileActionLabel}"/>
+    </StackPanel>
+    <StackPanel Width="48" Margin="0,0,4,0">
+      <Button Style="{StaticResource ProfileActionButton}" ToolTip="Export Profile&#x0a;Export the selected profile as ModsConfig.xml." Click="Export_Click">
+        <local:ForgeIcon Kind="Export" IconBrush="{DynamicResource TextPrimaryBrush}"/>
+      </Button>
+      <TextBlock Text="Export" Style="{StaticResource ProfileActionLabel}"/>
+    </StackPanel>
+    <StackPanel Width="48" Margin="0,0,4,0">
+      <Button Style="{StaticResource ProfileActionButton}" ToolTip="Compare Profiles&#x0a;Compare the selected profile with another saved profile." Click="Compare_Click">
+        <TextBlock Text="⇄" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+      </Button>
+      <TextBlock Text="Compare" Style="{StaticResource ProfileActionLabel}"/>
+    </StackPanel>
+    <StackPanel Width="48" Margin="0,0,4,0">
+      <Button Style="{StaticResource ProfileActionButton}" IsEnabled="{Binding CanLock, ElementName=Root}" Click="Lock_Click">
+        <Button.ToolTip>
+          <TextBlock TextWrapping="Wrap" MaxWidth="260">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Setter Property="Text" Value="Lock Profile&#x0a;Prevent edits while still allowing launch and analysis."/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding IsLocked, ElementName=Root}" Value="True">
+                    <Setter Property="Text" Value="Unlock Profile&#x0a;Restore editing and load-order changes."/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+        </Button.ToolTip>
+        <Image Width="17" Height="17" Stretch="Uniform">
+          <Image.Style>
+            <Style TargetType="Image">
+              <Setter Property="Source" Value="/RimForge.UI;component/Assets/Icons/State/Locked.png"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsLocked, ElementName=Root}" Value="True">
+                  <Setter Property="Source" Value="/RimForge.UI;component/Assets/Icons/State/Unlocked.png"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Image.Style>
+        </Image>
+      </Button>
+      <TextBlock>
+        <TextBlock.Style>
+          <Style TargetType="TextBlock" BasedOn="{StaticResource ProfileActionLabel}">
+            <Setter Property="Text" Value="Lock"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding IsLocked, ElementName=Root}" Value="True">
+                <Setter Property="Text" Value="Unlock"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </TextBlock.Style>
+      </TextBlock>
+    </StackPanel>
+    <StackPanel Width="48">
+      <Button Style="{StaticResource ProfileActionButton}" ToolTip="Delete Profile" IsEnabled="{Binding CanDelete, ElementName=Root}" Click="Delete_Click">
+        <local:ForgeIcon Kind="Delete" IconBrush="{DynamicResource DangerBrush}"/>
+      </Button>
+      <TextBlock Text="Delete" Style="{StaticResource ProfileActionLabel}"/>
+    </StackPanel>
+  </StackPanel>
+</UserControl>

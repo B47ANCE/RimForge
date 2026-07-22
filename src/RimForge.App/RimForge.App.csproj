@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>RimForge</AssemblyName>
+    <RootNamespace>RimForge.App</RootNamespace>
+    <ApplicationIcon>..\RimForge.UI\Assets\Branding\Badge\RimForge.Badge.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\Database.Curated\LoadOrderRules.json" Link="Database.Curated\LoadOrderRules.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\Database.Curated\UseThisInstead.json" Link="Database.Curated\UseThisInstead.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RimForge.Analysis\RimForge.Analysis.csproj" />
+    <ProjectReference Include="..\RimForge.Core\RimForge.Core.csproj" />
+    <ProjectReference Include="..\RimForge.Infrastructure\RimForge.Infrastructure.csproj" />
+    <ProjectReference Include="..\RimForge.UI\RimForge.UI.csproj" />
+  </ItemGroup>
+</Project>

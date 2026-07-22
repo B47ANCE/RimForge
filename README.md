@@ -1,66 +1,69 @@
 # RimForge
 
-> We're not just managing your mods—we're forging a stable, optimized mod ecosystem.
+RimForge Client is the native Windows engineering platform for discovering, diagnosing, repairing, sorting, and managing RimWorld mod libraries. It contains the .NET 10 WPF client, local Companion Host/bootstrapper, protocol authority, evidence ingestion, analysis, repair, and visualization systems. The RimWorld-loaded mod lives in the sibling `RimForge.Companion` repository.
 
-RimForge is an advanced RimWorld mod analysis, optimization, repair, and profile-management platform for large mod collections.
+RimForge is in active alpha development. The canonical version is stored in [`VERSION`](VERSION) and applied to every project by [`Directory.Build.props`](Directory.Build.props).
 
-## Current release
+## Repository layout
 
-**2.1.0-alpha.5 “Ember Phase 2”** is the canonical first GitHub baseline and introduces incremental intelligence. RimForge fingerprints installed mods, remembers the previous state, reuses unchanged `About.xml` metadata and evidence results, and reports how much work was avoided.
+| Path | Responsibility |
+|---|---|
+| `src/RimForge.App` | WPF application, composition root, and feature orchestration |
+| `src/RimForge.Core` | Domain models and service contracts |
+| `src/RimForge.Infrastructure` | Discovery, persistence, runtime ingestion, and external services |
+| `src/RimForge.Analysis` | Analysis, dependency intelligence, sorting, and repair planning |
+| `src/RimForge.UI` | Shared WPF controls, themes, and presentation components |
+| `src/RimForge.Protocol` | Shared desktop/host/mod wire contracts (`netstandard2.0`) |
+| `src/RimForge.Companion.Host` | Local Companion Host and IPC endpoint |
+| `tests` | Client .NET tests, executable checks, and PowerShell contract gates |
+| `build` | Client build tooling |
+| `docs` | Client architecture, development, and protocol documentation |
+| `../RimForge.Companion` | RimWorld-loaded companion mod and package skeleton |
+| `../RimForge.Companion.TestSuite` | Controlled runtime fixtures and Companion certification |
 
-## Features
+Generated `bin`, `obj`, `artifacts`, reports, runtime caches, and local configuration are ignored and must not be committed.
 
-- Dependency graph and missing-dependency detection
-- Multi-profile validation and comparison
-- Load-order optimization and blueprint scoring
-- RimWorld version and Workshop status checks
-- Evidence-based taxonomy and generated mod database
-- DDS texture validation, conversion, and repair
-- External dependency management for tools such as `texconv`
-- Incremental mod fingerprints, cache invalidation, and timing metrics
+## Requirements
 
-## Quick start
+- Windows 10 or 11
+- .NET 10 SDK
+- PowerShell 5.1 or newer
 
-1. Edit `Config.json` and set the RimWorld mod roots for your Steam installation. The committed defaults use the standard `C:` paths.
-2. Place native `ModsConfig.xml` profiles in `Profiles`.
-3. Run `Launch-RimForge.bat`, or:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\Audit.ps1
-```
-
-The first Ember run establishes an incremental baseline. Later runs report changed, unchanged, added, and removed mods.
-
-## Runtime data
-
-- `Profiles` — source profiles; never cleared automatically.
-- `Output` — reports from the current run; cleared at audit startup.
-- `Cache` — persistent metadata, evidence, dependency, and incremental state.
-- `Logs` — timestamped audit logs.
-- `Database.Generated` — normalized derived records.
-- `Database` — rules, taxonomy, blueprint, and dependency manifests.
-
-Ember adds:
-
-- `Cache\Incremental\ModState.json`
-- `Cache\AboutMetadata\*.json`
-- `Cache\Evidence\EvidenceIndex.json`
-- `Output\IncrementalAudit.json`
-
-Delete those cache folders to force a fresh baseline. Source mods and profiles are never modified by incremental analysis.
-
-## Validation
+## Build and validate
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\Tests\Smoke-Test.ps1
-powershell -ExecutionPolicy Bypass -File .\Tests\FingerprintService-Test.ps1
-powershell -ExecutionPolicy Bypass -File .\Tests\IncrementalAudit-Test.ps1
-powershell -ExecutionPolicy Bypass -File .\Tests\CacheService-Test.ps1
-powershell -ExecutionPolicy Bypass -File .\Tests\DependencyManager-Test.ps1
+.\Build-Test-All.ps1
 ```
 
-## Safety model
+The standard build validates the desktop application, Companion Host, shared protocol, .NET checks, and client repository contract tests. Companion runtime validation is owned by `../RimForge.Companion.TestSuite`.
 
-RimForge does not execute mod assemblies during evidence analysis. Texture installation remains an explicit operation. Generated database records contain derived metadata, not Workshop payloads.
+Build only the desktop solution:
 
-RimForge is an independent desktop project and is not affiliated with Ludeon Studios or any Steam Workshop mod sharing the same or a similar name.
+```powershell
+dotnet restore .\RimForge.sln
+dotnet build .\RimForge.sln -c Debug
+```
+
+Launch after a Debug build with `Launch-RimForge.bat`.
+
+## Architecture and safety
+
+The accepted runtime flow is:
+
+`RimForge App -> Companion Host -> named-pipe session -> RimWorld Agent -> runtime evidence -> analysis -> repair/UI`
+
+The companion mod is diagnostics-only: it must fail closed, avoid gameplay mutations, avoid network listeners, and never write to saves. Runtime state belongs beneath the application data directory, never in the repository.
+
+Long-lived client services run through the shared hosted-work coordinator, while user-visible operations run through the foreground background-task service. Machine and workspace paths are resolved by the platform discovery and `RimForgePathLayout` boundaries; features consume those paths instead of probing the host independently.
+
+All desktop, dependency, community, runtime, and compatibility observations enter Forge Evidence through `IForgeEvidenceProducer`. Immutable generations are persisted by `IForgeEvidenceStore`, published through `IForgeEvidenceBus`, and consumed by the client and ForgeView without parallel evidence projections.
+
+Startup performs platform health validation, records recoverable active-run state, and captures the protected-state boundary. Updates fail closed unless their channel key is pinned, their manifest signature and package hash verify, and their installation root cannot overlap settings, profiles, output, caches, sessions, or diagnostics.
+
+The Analysis Engine accepts an explicit full-library request plus unified Forge Evidence and returns a deterministic snapshot with static and runtime findings, complete structured diagnostics, typed stage progress, per-stage timing, scope metrics, a reproducible input fingerprint, and canonical full-library/per-mod explanations. Unchanged runs reuse a bounded in-memory result cache with explicit refresh, bypass, provenance, and invalidation controls. Active profile order influences scoped findings and proposed ordering without excluding inactive installed mods from dependency analysis.
+
+See [Architecture](ARCHITECTURE.md), [Runtime Companion](RUNTIME_COMPANION.md), [Roadmap](ROADMAP.md), [Contributing](CONTRIBUTING.md), and the [documentation index](docs/README.md).
+
+## Project status
+
+RimForge is an independent community project and is not affiliated with Ludeon Studios, Valve, RimPy, RimSort, or Steam Workshop projects with similar names.

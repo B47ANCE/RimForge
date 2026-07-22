@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 3,
+  "brandInvariant": "CompactBadge",
+  "authoritativeFormat": "svg",
+  "transparentBackgroundRequired": true,
+  "workflows": [
+    {
+      "id": "LegacyAnvil",
+      "accessory": "None",
+      "asset": "Anvil/RimForge.Anvil.Base.svg",
+      "status": "RetainedFeatureArtwork",
+      "usage": "Health and forge-specific visuals only; not application identity"
+    },
+    {
+      "id": "Scan",
+      "accessory": "MagnifyingGlass",
+      "asset": "Workflow/RimForge.Workflow.Scan.svg",
+      "status": "Planned"
+    },
+    {
+      "id": "Forge",
+      "accessory": "Hammer",
+      "asset": "Workflow/RimForge.Workflow.Forge.svg",
+      "status": "Planned"
+    },
+    {
+      "id": "Optimization",
+      "accessory": "Blueprint",
+      "asset": "Workflow/RimForge.Workflow.Optimization.svg",
+      "status": "Planned"
+    },
+    {
+      "id": "IssueViewer",
+      "accessory": "Wrench",
+      "asset": "Workflow/RimForge.Workflow.IssueViewer.svg",
+      "status": "Planned"
+    },
+    {
+      "id": "Diagnostics",
+      "accessory": "Clipboard",
+      "asset": "Workflow/RimForge.Workflow.Diagnostics.svg",
+      "status": "Planned"
+    },
+    {
+      "id": "Verification",
+      "accessory": "Shield",
+      "asset": "Workflow/RimForge.Workflow.Verification.svg",
+      "status": "Planned"
+    },
+    {
+      "id": "LaunchReadinessReview",
+      "accessory": "RocketFlame",
+      "asset": "Workflow/RimForge.Workflow.LaunchReadinessReview.svg",
+      "status": "Planned"
+    },
+    {
+      "id": "Console",
+      "accessory": "TerminalTablet",
+      "asset": "Workflow/RimForge.Workflow.Console.svg",
+      "status": "Planned"
+    },
+    {
+      "id": "TextureTools",
+      "accessory": "TextureRoll",
+      "asset": "Workflow/RimForge.Workflow.TextureTools.svg",
+      "status": "Planned"
+    },
+    {
+      "id": "DependencyGraph",
+      "accessory": "NetworkNodes",
+      "asset": "Workflow/RimForge.Workflow.DependencyGraph.svg",
+      "status": "Planned"
+    }
+  ],
+  "assetRoot": "src/RimForge.UI/Assets",
+  "productionAssets": [
+    {
+      "id": "RimForgeBadgePng",
+      "category": "Branding",
+      "asset": "Branding/Badge/RimForge.Badge.png",
+      "status": "ApprovedCanonical"
+    },
+    {
+      "id": "RimForgeBadgeIco",
+      "category": "Branding",
+      "asset": "Branding/Badge/RimForge.Badge.ico",
+      "derivedFrom": "Branding/Badge/RimForge.Badge.png",
+      "status": "ApprovedRuntimeDerivative"
+    },
+    {
+      "id": "RimForgeLogoPng",
+      "category": "Branding",
+      "asset": "Branding/Logo/RimForge.Logo.png",
+      "status": "ApprovedRuntimeDerivative"
+    },
+    {
+      "id": "RimForgeAnvilSvg",
+      "category": "FeatureArtwork",
+      "asset": "Branding/Anvil/RimForge.Anvil.Base.svg",
+      "status": "RetainedFeatureArtwork",
+      "usage": "Health and forge-specific visuals only"
+    },
+    {
+      "id": "RefreshAction",
+      "category": "ActionIcon",
+      "asset": "Icons/Actions/Refresh.svg",
+      "runtimeDerivative": "Icons/Actions/Refresh.png",
+      "status": "Approved"
+    },
+    {
+      "id": "ProfileLocked",
+      "category": "StateIcon",
+      "asset": "Icons/State/Locked.svg",
+      "runtimeDerivative": "Icons/State/Locked.png",
+      "status": "Approved"
+    },
+    {
+      "id": "ProfileUnlocked",
+      "category": "StateIcon",
+      "asset": "Icons/State/Unlocked.svg",
+      "runtimeDerivative": "Icons/State/Unlocked.png",
+      "status": "Approved"
+    },
+    {
+      "id": "OfficialSource",
+      "category": "SourceIcon",
+      "asset": "Icons/Source/Official.svg",
+      "status": "Approved"
+    },
+    {
+      "id": "SteamWorkshopSource",
+      "category": "SourceIcon",
+      "asset": "Icons/Source/SteamWorkshop.svg",
+      "status": "Approved"
+    }
+  ],
+  "compactIdentity": {
+    "id": "RimForgeBadge",
+    "sourceAsset": "Branding/Badge/RimForge.Badge.png",
+    "windowsIcon": "Branding/Badge/RimForge.Badge.ico",
+    "status": "ApprovedCanonical",
+    "usage": [
+      "ApplicationIcon",
+      "WindowIcon",
+      "Taskbar",
+      "Shortcut",
+      "SmallChrome"
+    ]
+  }
+}

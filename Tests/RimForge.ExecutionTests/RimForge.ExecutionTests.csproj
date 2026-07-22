@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>RimForge.ExecutionTests</RootNamespace>
+    <AssemblyName>RimForge.ExecutionTests</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RimForge.Core\RimForge.Core.csproj" />
+    <ProjectReference Include="..\..\src\RimForge.Analysis\RimForge.Analysis.csproj" />
+    <ProjectReference Include="..\..\src\RimForge.Infrastructure\RimForge.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\RimForge.Companion.Host\RimForge.Companion.Host.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,11 @@
+{
+  "AnalysisInspectorV2": true,
+  "ProfileHealthScore": true,
+  "RepairRecommendations": true,
+  "AdvancedForgeView": true,
+  "ExperimentalAutoSort": true,
+  "DashboardLoadOrderEditor": true,
+  "GlobalForgeSession": true,
+  "RimWorldGameLogConsole": true,
+  "DirectGameLaunchFallback": true
+}
