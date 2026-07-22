@@ -154,6 +154,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private RimForgeProfile? _forgedProfile;
     private readonly HashSet<string> _favoriteProfileNames = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _lockedProfileNames = new(StringComparer.OrdinalIgnoreCase);
+    private ProfileCatalogState _profileCatalogState = ProfileCatalogState.Empty;
     private bool _isFirstRunGuideVisible;
     private bool _isNativeScanVisible;
     private bool _isNativeScanComplete;
@@ -746,6 +747,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             if (!Set(ref _showFullLibrary, value)) return;
             _workspaceStateService.SetShowFullLibrary(value);
+            SaveProfileShellState();
             Notify(nameof(ModSorterScopeText));
             RebuildModSorter();
             RebuildIssueViewer();
@@ -1116,6 +1118,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             if (!Set(ref _selectedProfile, value)) return;
             _workspaceStateService.SetCurrentProfile(value);
+            SaveProfileShellState();
             _undoService.Clear();
             QueueAnalysisRefresh();
             RebuildModSorter();
@@ -2669,7 +2672,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                         installedMods,
                         context.CancellationToken);
                 });
-            var selectedName = SelectedProfile?.Name;
+            var selectedName = SelectedProfile?.Name ?? _profileCatalogState.LastSelectedProfileName;
             var profileNames = loaded.Select(profile => profile.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var shellStateChanged = _favoriteProfileNames.RemoveWhere(name => !profileNames.Contains(name)) > 0;
             shellStateChanged |= _lockedProfileNames.RemoveWhere(name => !profileNames.Contains(name)) > 0;
@@ -2710,19 +2713,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         _favoriteProfileNames.Clear();
         _lockedProfileNames.Clear();
-        var state = _profileCatalogStateStore.Load(RuntimePaths.ProfilesRoot);
-        _favoriteProfileNames.UnionWith(state.FavoriteProfileNames);
-        _lockedProfileNames.UnionWith(state.LockedProfileNames);
+        _profileCatalogState = _profileCatalogStateStore.Load(RuntimePaths.ProfilesRoot);
+        _favoriteProfileNames.UnionWith(_profileCatalogState.FavoriteProfileNames);
+        _lockedProfileNames.UnionWith(_profileCatalogState.LockedProfileNames);
+        _showFullLibrary = _profileCatalogState.ShowFullLibrary;
+        _workspaceStateService.SetShowFullLibrary(_showFullLibrary);
+        Notify(nameof(ShowFullLibrary));
     }
 
-    private void SaveProfileShellState()
+    private void SaveProfileShellState(string? selectedProfileName = null)
     {
-        _profileCatalogStateStore.Save(
+        _profileCatalogState = _profileCatalogStateStore.Save(
             RuntimePaths.ProfilesRoot,
             new ProfileCatalogState(
                 _favoriteProfileNames.ToArray(),
                 _lockedProfileNames.ToArray(),
-                DateTimeOffset.UtcNow));
+                DateTimeOffset.UtcNow,
+                selectedProfileName ?? SelectedProfile?.Name,
+                ShowFullLibrary));
     }
 
     private static string MakeSafeProfileName(string name)
@@ -2776,7 +2784,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             if (_favoriteProfileNames.Remove(profile.Name)) _favoriteProfileNames.Add(result.Profile.Name);
             if (_lockedProfileNames.Remove(profile.Name)) _lockedProfileNames.Add(result.Profile.Name);
-            SaveProfileShellState();
+            SaveProfileShellState(result.Profile.Name);
         }
         await CompleteProfileOperationAsync(result, selectResultProfile: true);
     }
@@ -2958,8 +2966,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             _favoriteProfileNames.Remove(profile.Name);
             _lockedProfileNames.Remove(profile.Name);
-            SaveProfileShellState();
             SelectedProfile = null;
+            SaveProfileShellState();
         }
         await CompleteProfileOperationAsync(result, selectResultProfile: false);
     }

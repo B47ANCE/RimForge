@@ -952,10 +952,15 @@ try
         "Legacy profile shell state was not migrated to the canonical catalog file.");
     var savedCatalog = catalogStore.Save(catalogRoot, migratedCatalog with
     {
-        FavoriteProfileNames = ["Gamma", "gamma", "Alpha"]
+        FavoriteProfileNames = ["Gamma", "gamma", "Alpha"],
+        LastSelectedProfileName = "  Gamma  ",
+        ShowFullLibrary = false
     });
     Require(savedCatalog.FavoriteProfileNames.SequenceEqual(["Alpha", "Gamma"], StringComparer.OrdinalIgnoreCase),
         "Profile catalog persistence did not normalize duplicate names.");
+    var reloadedCatalog = catalogStore.Load(catalogRoot);
+    Require(reloadedCatalog.LastSelectedProfileName == "Gamma" && !reloadedCatalog.ShowFullLibrary,
+        "Profile catalog persistence did not restore workspace continuity settings.");
 }
 finally
 {

@@ -36,6 +36,7 @@ public sealed class ProfileCatalogStateStore : IProfileCatalogStateStore
         {
             FavoriteProfileNames = Normalize(state.FavoriteProfileNames),
             LockedProfileNames = Normalize(state.LockedProfileNames),
+            LastSelectedProfileName = NormalizeOptional(state.LastSelectedProfileName),
             UpdatedUtc = DateTimeOffset.UtcNow
         };
         var path = Path.Combine(profilesRoot, FileName);
@@ -66,7 +67,9 @@ public sealed class ProfileCatalogStateStore : IProfileCatalogStateStore
             return new ProfileCatalogState(
                 ReadNames(document.RootElement, "favorites"),
                 ReadNames(document.RootElement, "locked"),
-                DateTimeOffset.UtcNow);
+                DateTimeOffset.UtcNow,
+                null,
+                true);
         }
         catch (JsonException)
         {
@@ -85,4 +88,7 @@ public sealed class ProfileCatalogStateStore : IProfileCatalogStateStore
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
         .ToArray();
+
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

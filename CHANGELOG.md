@@ -1,4 +1,19 @@
-# Unreleased — Epic C Pass 5 Verified Profile Portability
+# Unreleased — Epic C Pass 6 Profile Workspace Continuity
+
+## Added
+
+- Added durable last-selected profile and library/profile scope to canonical profile catalog state.
+- Added startup restoration of profile selection and scope.
+- Added deterministic fallback and persisted correction when a remembered profile no longer exists.
+- Added behavioral coverage for continuity settings across catalog reloads.
+
+## Changed
+
+- Profile selection and scope changes now update the existing atomic catalog store.
+- Profile rename and deletion workflows now preserve or clear remembered selection appropriately.
+- Advanced the client version to `2.2.0-alpha.66`.
+
+# Previous Unreleased — Epic C Pass 5 Verified Profile Portability
 
 ## Added
 

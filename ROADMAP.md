@@ -119,6 +119,15 @@ RimForge is currently implementing **Epic C — Library and Profiles**. Work bui
 - [x] missing and target-version-incompatible mod preview
 - [x] main-client rejection and compatibility-warning workflow
 
+### Pass 6: profile workspace continuity
+
+- [x] durable last-selected profile identity
+- [x] durable full-library versus active-profile scope
+- [x] startup restoration through canonical catalog state
+- [x] deterministic fallback when the remembered profile no longer exists
+- [x] rename and deletion continuity updates
+- [x] no additional UI-owned persistence format
+
 ## Later epics
 
 - **Epic C:** Library and Profiles
