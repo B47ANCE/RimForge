@@ -35,6 +35,13 @@ public interface IModLibraryService
         CancellationToken cancellationToken = default);
 }
 
+public interface IForgeGraphProjectionService
+{
+    ForgeGraphProjection Project(
+        IReadOnlyList<ModRecord> mods,
+        ForgeGraphEvidenceInput evidence);
+}
+
 public interface ILibraryProfileProjectionService
 {
     LibraryProfileWorkspaceSnapshot Create(

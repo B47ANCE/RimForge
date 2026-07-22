@@ -9,16 +9,17 @@ function Assert-Contains([string]$Path, [string]$Pattern, [string]$Message) {
 }
 
 $service = Join-Path $RepoRoot 'src\RimForge.Infrastructure\Services\ForgeGraphProjectionService.cs'
+$models = Join-Path $RepoRoot 'src\RimForge.Core\Models\ForgeGraphModels.cs'
 $sharedEvidence = Join-Path $RepoRoot 'src\RimForge.App\Features\SharedEvidence\MainWindow.SharedEvidence.cs'
 
-foreach ($path in @($service, $sharedEvidence)) {
+foreach ($path in @($service, $models, $sharedEvidence)) {
     if (-not (Test-Path -LiteralPath $path)) { $failures.Add("Missing required file: $path") }
 }
 
 if ($failures.Count -eq 0) {
-    Assert-Contains $service 'record ForgeGraphDiff' 'Incremental graph diff contract is missing.'
-    Assert-Contains $service 'record ForgeGraphCluster' 'SCC cluster contract is missing.'
-    Assert-Contains $service 'record ForgeGraphIntelligence' 'Graph intelligence projection is missing.'
+    Assert-Contains $models 'record ForgeGraphDiff' 'Incremental graph diff contract is missing.'
+    Assert-Contains $models 'record ForgeGraphCluster' 'SCC cluster contract is missing.'
+    Assert-Contains $models 'record ForgeGraphIntelligence' 'Graph intelligence projection is missing.'
     Assert-Contains $service 'FindStronglyConnectedComponents' 'Strongly connected component analysis is missing.'
     Assert-Contains $service 'Dependents' 'Reverse dependency index is missing.'
     Assert-Contains $service '_previousNodeFingerprints' 'Incremental node comparison state is missing.'

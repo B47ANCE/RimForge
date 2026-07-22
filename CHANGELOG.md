@@ -1,4 +1,15 @@
-# Unreleased — Epic C Pass 8 Canonical Profile Readiness
+# Unreleased — Epic D Pass 1 ForgeView Graph Domain Boundary
+
+## Changed
+
+- Moved immutable ForgeView projection, diff, cluster, intelligence, and metrics models from Infrastructure into Core.
+- Moved `IForgeGraphProjectionService` into the canonical Core service contracts.
+- Limited `ForgeGraphProjectionService` to implementation, incremental caching, and graph execution concerns.
+- Added an architecture gate preventing ForgeView domain contracts from returning to Infrastructure.
+- Reorganized the remaining roadmap around Companion readiness, dependency-ordered passes, integration gates, and explicit completion criteria.
+- Advanced the client version to `2.2.0-alpha.69`.
+
+# Previous Unreleased — Epic C Pass 8 Canonical Profile Readiness
 
 ## Added
 

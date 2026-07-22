@@ -9,18 +9,19 @@ function Assert-Contains([string]$Path, [string]$Pattern, [string]$Message) {
 }
 
 $service = Join-Path $RepoRoot 'src\RimForge.Infrastructure\Services\ForgeGraphProjectionService.cs'
+$contracts = Join-Path $RepoRoot 'src\RimForge.Core\Services\NativeEngineInterfaces.cs'
 $composition = Join-Path $RepoRoot 'src\RimForge.App\Composition\RimForgeApplicationServices.cs'
 $sharedEvidence = Join-Path $RepoRoot 'src\RimForge.App\Features\SharedEvidence\MainWindow.SharedEvidence.cs'
 
-foreach ($path in @($service, $composition, $sharedEvidence)) {
+foreach ($path in @($service, $contracts, $composition, $sharedEvidence)) {
     if (-not (Test-Path -LiteralPath $path)) { $failures.Add("Missing required file: $path") }
 }
 
 if ($failures.Count -eq 0) {
-    Assert-Contains $service 'interface IForgeGraphProjectionService' 'Projection service contract is missing.'
-    Assert-Contains $service 'ForgeEvidenceSnapshot evidenceSnapshot' 'Projection is not grounded in Shared Evidence generations.'
-    Assert-Contains $service 'ReusedNodes' 'Incremental graph node reuse metrics are missing.'
-    Assert-Contains $service 'TopologySignature' 'Deterministic topology signature is missing.'
+    Assert-Contains $contracts 'interface IForgeGraphProjectionService' 'Projection service contract is missing.'
+    Assert-Contains $contracts 'ForgeGraphEvidenceInput evidence' 'Projection is not grounded in a Core-owned Shared Evidence input.'
+    Assert-Contains (Join-Path $RepoRoot 'src\RimForge.Core\Models\ForgeGraphModels.cs') 'ReusedNodes' 'Incremental graph node reuse metrics are missing.'
+    Assert-Contains (Join-Path $RepoRoot 'src\RimForge.Core\Models\ForgeGraphModels.cs') 'TopologySignature' 'Deterministic topology signature is missing.'
     Assert-Contains $service 'SHA256\.HashData' 'Topology signature is not content-derived.'
     Assert-Contains $service '_nodeCache' 'Projection node cache is missing.'
     Assert-Contains $composition 'ForgeGraphProjectionService' 'Projection service is not registered in the composition root.'

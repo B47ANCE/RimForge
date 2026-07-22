@@ -1,6 +1,15 @@
 # RimForge Roadmap
 
-RimForge is currently implementing **Epic C — Library and Profiles**. Work builds on the existing application; completed systems are improved rather than replaced.
+RimForge is currently completing the **Companion Production-Readiness Gate**, then resumes **Epic D — ForgeView**. Work builds on the existing application; completed systems are improved rather than replaced.
+
+## Delivery workflow
+
+Work follows the product dependency chain: runtime evidence → analysis → profiles → visualization → repair → productivity → release. A pass should deliver one reviewable vertical capability, keep all three repositories buildable, and end with tests, documentation, version alignment, and a pushed commit.
+
+- **Implementation gates** run continuously: deterministic build, unit/static tests, repository boundaries, protocol compatibility, and no regressions in existing client behavior.
+- **Integration gates** run when a producer/consumer boundary changes: real RimWorld startup, IPC/offline replay, client ingestion, and UI projection.
+- **Release gates** run after feature work stabilizes: performance, recovery, packaging, updates, security, and full acceptance matrices.
+- Companion scope stays passive and minimal. Data collection belongs in `RimForge.Companion`; hosting, interpretation, display, and repair belong in `RimForge.Client`; controlled runtime fixtures belong in `RimForge.Companion.TestSuite`.
 
 ## Epic A — Platform Foundation and Runtime Infrastructure
 
@@ -146,12 +155,110 @@ RimForge is currently implementing **Epic C — Library and Profiles**. Work bui
 - [x] readiness surfaced in profile management UI
 - [x] unsafe activation blocked before RimWorld configuration changes
 
-## Later epics
+## Companion Production-Readiness Gate
 
-- **Epic C:** Library and Profiles
-- **Epic D:** ForgeView
-- **Epic E:** Repair Engine
-- **Epic F:** Productivity
-- **Epic G:** Release engineering
+### Gate 1: implementation and automation — do now
 
-Release gates include deterministic builds, automated tests, runtime protocol compatibility, recovery validation, installer/update safety, performance profiling, and complete user/developer documentation.
+- [x] standalone Companion and Test Suite repositories with clean ownership boundaries
+- [x] Companion and runtime harness build against RimWorld 1.6 managed assemblies
+- [x] protocol serialization, fingerprint, severity, and mod-context tests
+- [ ] replace placeholder assembly metadata and align product/package naming
+- [ ] automate Companion package validation and cross-repository protocol compatibility in CI
+- [ ] add deterministic transport, spool recovery, truncation/rotation, malformed-envelope, and offline replay tests
+- [ ] convert the RF-AGENT-001 and RF-AGENT-002 acceptance documents into an executable or evidence-recording checklist
+
+### Gate 2: real-runtime integration — do before expanding ForgeView
+
+- [ ] install the Companion and Test Harness into the development RimWorld environment
+- [ ] validate main-menu startup, session identity, hello, heartbeat, shutdown, and no-host behavior
+- [ ] validate live delivery, offline spooling, desktop restart, deduplication, and Player.log rotation
+- [ ] verify Alpha/Beta attribution, optional integration behavior, and false-positive controls
+- [ ] record acceptance evidence and resolve every runtime defect found
+
+### Gate 3: product certification — finish after Epics D and E
+
+- [ ] verify runtime evidence in Inspector and Issue Viewer
+- [ ] verify ForgeView relationship types and provenance
+- [ ] verify Repair Engine never performs an unsafe automatic runtime-evidence repair
+- [ ] complete performance, soak, recovery, packaging, install/update, and security validation
+- [ ] mark both Companion acceptance checklists complete with release evidence
+
+## Epic D — ForgeView
+
+### Pass 1: graph domain boundary
+
+- [x] immutable graph projection contracts owned by Core
+- [x] graph diff, cluster, intelligence, and metrics models owned by Core
+- [x] projection service interface independent of Infrastructure
+- [x] Infrastructure limited to graph execution and incremental caching
+- [x] UI consumers compiled against domain contracts
+- [x] architecture regression coverage
+
+### Pass 2: canonical graph query and selection
+
+- [ ] one query/filter contract shared by canvas, outline, search, and issue navigation
+- [ ] deterministic selection, focus, history, and profile-owned layout state
+- [ ] evidence provenance available from every rendered relationship
+
+### Pass 3: scalable graph rendering
+
+- [ ] incremental layout and rendering for large libraries
+- [ ] cancellation, stale-result suppression, and bounded caches
+- [ ] measurable performance budgets with representative fixtures
+
+### Pass 4: cohesive ForgeView workflow
+
+- [ ] Inspector, Issue Viewer, profile, and graph navigation converge on one selected-mod context
+- [ ] empty, loading, degraded-evidence, and failure states are actionable
+- [ ] accessibility, keyboard operation, and visual consistency acceptance
+
+## Epic E — Repair Engine
+
+### Pass 1: deterministic repair planning
+
+- [ ] immutable repair plans with evidence, confidence, safety class, and preview
+- [ ] no-write analysis separated from explicit execution
+- [ ] profile and filesystem preconditions validated before mutation
+
+### Pass 2: transactional execution and recovery
+
+- [ ] atomic execution, rollback, cancellation, and interrupted-session recovery
+- [ ] complete audit trail and user-visible outcome reporting
+- [ ] integration with profile readiness and ForgeView provenance
+
+### Pass 3: repair certification
+
+- [ ] safe automatic actions explicitly allowlisted
+- [ ] destructive or uncertain actions require confirmation
+- [ ] runtime-evidence repair hooks validated by Companion Gate 3
+
+## Epic F — Productivity
+
+### Pass 1: unified workflows
+
+- [ ] command/search/navigation consolidation around canonical application state
+- [ ] bulk profile and library operations with preview and undo
+
+### Pass 2: responsiveness and polish
+
+- [ ] background execution for remaining long-running work
+- [ ] startup, memory, interaction, and large-library performance budgets
+- [ ] accessibility and error-recovery polish
+
+## Epic G — Release Engineering
+
+### Pass 1: reproducible distribution
+
+- [ ] deterministic Client and Companion artifacts with provenance and checksums
+- [ ] clean install, upgrade, rollback, and uninstall validation
+- [ ] version and protocol compatibility policy enforced in CI
+
+### Pass 2: release qualification
+
+- [ ] complete cross-repository test matrix and Companion Gate 3
+- [ ] recovery, security, performance, and soak gates
+- [ ] user, developer, troubleshooting, and release documentation complete
+
+## Definition of done
+
+An epic is complete only when its user-facing workflow functions end to end, architectural ownership is enforced, automated and applicable real-runtime tests pass, performance stays within documented budgets, failure/recovery behavior is verified, and documentation matches the shipped behavior.

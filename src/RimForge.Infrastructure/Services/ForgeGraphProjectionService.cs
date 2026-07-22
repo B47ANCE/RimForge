@@ -5,56 +5,6 @@ using RimForge.Core.Services;
 
 namespace RimForge.Infrastructure.Services;
 
-public sealed record ForgeGraphProjectionMetrics(
-    int EvidenceGeneration,
-    int Nodes,
-    int Edges,
-    int ReusedNodes,
-    int RebuiltNodes,
-    TimeSpan Elapsed,
-    string TopologySignature);
-
-public sealed record ForgeGraphDiff(
-    IReadOnlyList<string> AddedNodes,
-    IReadOnlyList<string> RemovedNodes,
-    IReadOnlyList<string> ChangedNodes,
-    IReadOnlyList<string> AddedEdges,
-    IReadOnlyList<string> RemovedEdges);
-
-public sealed record ForgeGraphCluster(
-    string Id,
-    IReadOnlyList<string> Members,
-    bool IsCycle);
-
-public sealed record ForgeGraphIntelligenceMetrics(
-    int RequiredEdges,
-    int OrderingEdges,
-    int ConflictEdges,
-    int DependentsIndexed,
-    int StronglyConnectedComponents,
-    int CyclicComponents,
-    TimeSpan Elapsed);
-
-public sealed record ForgeGraphIntelligence(
-    IReadOnlyDictionary<string, IReadOnlyList<string>> Dependents,
-    IReadOnlyList<ForgeGraphCluster> Clusters,
-    ForgeGraphDiff Diff,
-    ForgeGraphIntelligenceMetrics Metrics);
-
-public sealed record ForgeGraphProjection(
-    DependencyGraphModel Graph,
-    IReadOnlyList<MissingDependency> MissingDependencies,
-    IReadOnlyList<DependencyCycle> Cycles,
-    ForgeGraphIntelligence Intelligence,
-    ForgeGraphProjectionMetrics Metrics);
-
-public interface IForgeGraphProjectionService
-{
-    ForgeGraphProjection Project(
-        IReadOnlyList<ModRecord> mods,
-        ForgeEvidenceSnapshot evidenceSnapshot);
-}
-
 /// <summary>
 /// Projects immutable Shared Evidence generations into the ForgeView graph model.
 /// Metadata remains authoritative for relationships; Shared Evidence enriches node
@@ -75,10 +25,10 @@ public sealed class ForgeGraphProjectionService : IForgeGraphProjectionService
 
     public ForgeGraphProjection Project(
         IReadOnlyList<ModRecord> mods,
-        ForgeEvidenceSnapshot evidenceSnapshot)
+        ForgeGraphEvidenceInput evidence)
     {
         ArgumentNullException.ThrowIfNull(mods);
-        ArgumentNullException.ThrowIfNull(evidenceSnapshot);
+        ArgumentNullException.ThrowIfNull(evidence);
 
         var started = DateTimeOffset.UtcNow;
         var (baseGraph, missing, cycles) = _dependencyGraphService.Build(mods);
@@ -94,7 +44,7 @@ public sealed class ForgeGraphProjectionService : IForgeGraphProjectionService
                 var source = baseGraph.Nodes[index];
                 var identity = source.PackageId ?? source.Id;
                 currentIds.Add(identity);
-                var fingerprint = BuildNodeFingerprint(source, evidenceSnapshot);
+                var fingerprint = BuildNodeFingerprint(source, evidence);
 
                 if (_nodeCache.TryGetValue(identity, out var cached)
                     && string.Equals(cached.Fingerprint, fingerprint, StringComparison.Ordinal))
@@ -104,7 +54,7 @@ public sealed class ForgeGraphProjectionService : IForgeGraphProjectionService
                     continue;
                 }
 
-                var enriched = source with { Status = ResolveHealth(source, evidenceSnapshot) };
+                var enriched = source with { Status = ResolveHealth(source, evidence) };
                 _nodeCache[identity] = new CachedNode(fingerprint, enriched);
                 nodes[index] = enriched;
                 rebuilt++;
@@ -119,7 +69,7 @@ public sealed class ForgeGraphProjectionService : IForgeGraphProjectionService
             .ThenBy(node => node.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var orderedEdges = baseGraph.Edges
-            .Concat(ProjectEvidenceRelationships(evidenceSnapshot))
+            .Concat(ProjectEvidenceRelationships(evidence))
             .GroupBy(BuildEdgeKey, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.OrderByDescending(edge => edge.DeclarationCount).First())
             .OrderBy(edge => edge.SourceId, StringComparer.OrdinalIgnoreCase)
@@ -127,8 +77,8 @@ public sealed class ForgeGraphProjectionService : IForgeGraphProjectionService
             .ThenBy(edge => edge.Relationship)
             .ToArray();
         var graph = new DependencyGraphModel(orderedNodes, orderedEdges);
-        var intelligence = BuildIntelligence(graph, evidenceSnapshot);
-        var signature = BuildTopologySignature(graph, evidenceSnapshot.Generation);
+        var intelligence = BuildIntelligence(graph, evidence);
+        var signature = BuildTopologySignature(graph, evidence.Generation);
         return new ForgeGraphProjection(
             graph,
             missing.OrderBy(item => item.SourcePackageId, StringComparer.OrdinalIgnoreCase)
@@ -137,7 +87,7 @@ public sealed class ForgeGraphProjectionService : IForgeGraphProjectionService
             cycles.OrderBy(cycle => string.Join("|", cycle.PackageIds), StringComparer.OrdinalIgnoreCase).ToArray(),
             intelligence,
             new ForgeGraphProjectionMetrics(
-                evidenceSnapshot.Generation,
+                evidence.Generation,
                 graph.Nodes.Count,
                 graph.Edges.Count,
                 reused,
@@ -146,7 +96,7 @@ public sealed class ForgeGraphProjectionService : IForgeGraphProjectionService
             signature));
     }
 
-    private static IEnumerable<DependencyGraphEdge> ProjectEvidenceRelationships(ForgeEvidenceSnapshot snapshot)
+    private static IEnumerable<DependencyGraphEdge> ProjectEvidenceRelationships(ForgeGraphEvidenceInput snapshot)
     {
         foreach (var evidence in snapshot.Contributions.Where(item =>
                      !string.IsNullOrWhiteSpace(item.RelatedSubjectId) &&
@@ -175,7 +125,7 @@ public sealed class ForgeGraphProjectionService : IForgeGraphProjectionService
 
     private ForgeGraphIntelligence BuildIntelligence(
         DependencyGraphModel graph,
-        ForgeEvidenceSnapshot snapshot)
+        ForgeGraphEvidenceInput snapshot)
     {
         var started = DateTimeOffset.UtcNow;
         var requiredEdges = graph.Edges
@@ -326,12 +276,12 @@ public sealed class ForgeGraphProjectionService : IForgeGraphProjectionService
 
     private static ModHealthStatus ResolveHealth(
         DependencyGraphNode node,
-        ForgeEvidenceSnapshot snapshot)
+        ForgeGraphEvidenceInput snapshot)
     {
         if (node.Status is ModHealthStatus.Error or ModHealthStatus.Warning)
             return node.Status;
 
-        var entry = snapshot.Entries.Values.FirstOrDefault(candidate =>
+        var entry = snapshot.Entries.FirstOrDefault(candidate =>
             string.Equals(candidate.ModId, node.Id, StringComparison.OrdinalIgnoreCase)
             || (!string.IsNullOrWhiteSpace(node.PackageId)
                 && string.Equals(candidate.PackageId, node.PackageId, StringComparison.OrdinalIgnoreCase)));
@@ -347,9 +297,9 @@ public sealed class ForgeGraphProjectionService : IForgeGraphProjectionService
 
     private static string BuildNodeFingerprint(
         DependencyGraphNode node,
-        ForgeEvidenceSnapshot snapshot)
+        ForgeGraphEvidenceInput snapshot)
     {
-        var entry = snapshot.Entries.Values.FirstOrDefault(candidate =>
+        var entry = snapshot.Entries.FirstOrDefault(candidate =>
             string.Equals(candidate.ModId, node.Id, StringComparison.OrdinalIgnoreCase)
             || (!string.IsNullOrWhiteSpace(node.PackageId)
                 && string.Equals(candidate.PackageId, node.PackageId, StringComparison.OrdinalIgnoreCase)));

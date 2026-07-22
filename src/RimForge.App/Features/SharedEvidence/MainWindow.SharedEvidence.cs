@@ -60,7 +60,15 @@ public partial class MainWindow
         foreach (var mod in evidenceChangedMods)
             ApplyBackgroundIntelligenceUpdate(mod);
 
-        var projection = _forgeGraphProjectionService.Project(Mods.ToArray(), snapshot);
+        var graphEvidence = new ForgeGraphEvidenceInput(
+            snapshot.Generation,
+            snapshot.Entries.Values.Select(entry => new ForgeGraphEvidenceEntry(
+                entry.ModId,
+                entry.PackageId,
+                entry.Fingerprint,
+                entry.Evidence)).ToArray(),
+            snapshot.Contributions);
+        var projection = _forgeGraphProjectionService.Project(Mods.ToArray(), graphEvidence);
         var orderedNodes = projection.Graph.Nodes
             .OrderBy(node => node.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(node => node.PackageId ?? node.Id, StringComparer.OrdinalIgnoreCase)
