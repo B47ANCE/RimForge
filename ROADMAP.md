@@ -162,18 +162,18 @@ Work follows the product dependency chain: runtime evidence → analysis → pro
 - [x] standalone Companion and Test Suite repositories with clean ownership boundaries
 - [x] Companion and runtime harness build against RimWorld 1.6 managed assemblies
 - [x] protocol serialization, fingerprint, severity, and mod-context tests
-- [ ] replace placeholder assembly metadata and align product/package naming
-- [ ] automate Companion package validation and cross-repository protocol compatibility in CI
-- [ ] add deterministic transport, spool recovery, truncation/rotation, malformed-envelope, and offline replay tests
-- [ ] convert the RF-AGENT-001 and RF-AGENT-002 acceptance documents into an executable or evidence-recording checklist
+- [x] replace placeholder assembly metadata and align product/package naming
+- [x] automate Companion package validation and cross-repository protocol compatibility in CI
+- [x] add deterministic transport, spool recovery, truncation/rotation, malformed-envelope, and offline replay tests
+- [x] convert the RF-AGENT-001 and RF-AGENT-002 acceptance documents into an executable or evidence-recording checklist
 
 ### Gate 2: real-runtime integration — do before expanding ForgeView
 
-- [ ] install the Companion and Test Harness into the development RimWorld environment
-- [ ] validate main-menu startup, session identity, hello, heartbeat, shutdown, and no-host behavior
-- [ ] validate live delivery, offline spooling, desktop restart, deduplication, and Player.log rotation
-- [ ] verify Alpha/Beta attribution, optional integration behavior, and false-positive controls
-- [ ] record acceptance evidence and resolve every runtime defect found
+- [x] install the Companion and Test Harness into the development RimWorld environment
+- [x] validate main-menu startup, session identity, hello, heartbeat, shutdown, and no-host behavior
+- [x] validate live delivery, offline spooling, desktop restart, deduplication, and Player.log rotation
+- [x] verify Alpha/Beta attribution, optional integration behavior, and false-positive controls
+- [x] record acceptance evidence and resolve every runtime defect found
 
 ### Gate 3: product certification — finish after Epics D and E
 

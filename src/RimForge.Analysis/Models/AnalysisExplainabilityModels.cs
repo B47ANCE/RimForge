@@ -46,7 +46,9 @@ public sealed class AnalysisExplanationCatalog
     {
         Overview = overview;
         Mods = mods;
-        _byPackageId = mods.ToDictionary(item => item.PackageId, StringComparer.OrdinalIgnoreCase);
+        _byPackageId = mods
+            .GroupBy(item => item.PackageId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
     }
 
     public AnalysisOverview Overview { get; }

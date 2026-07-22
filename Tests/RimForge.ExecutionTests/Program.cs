@@ -206,6 +206,21 @@ Require(analysisFirst.Diagnostics.Count == analysisFirst.Snapshot.Issues.Count &
         analysisFirst.Diagnostics.Any(item => item.Code == AnalysisIssueCode.InactiveRequiredDependency.ToString() &&
                                               item.PackageId == "example.analysis.alpha"),
     "Analysis diagnostics did not project every issue with package context.");
+var duplicateAnalysisAlpha = new ModRecord
+{
+    Id = "analysis-alpha-duplicate",
+    PackageId = analysisAlpha.PackageId,
+    Name = "Analysis Alpha Duplicate",
+    FolderName = "AnalysisAlphaDuplicate",
+    RootPath = Path.Combine(Path.GetTempPath(), "analysis-alpha-duplicate"),
+    AboutPath = Path.Combine(Path.GetTempPath(), "analysis-alpha-duplicate", "About", "About.xml"),
+    LastModified = analysisObservedAt
+};
+var duplicateAnalysis = await analysisEngine.AnalyzeAsync(new ModAnalysisRequest(
+    [analysisAlpha, duplicateAnalysisAlpha, analysisBeta], ["example.analysis.alpha"], "1.6"));
+Require(duplicateAnalysis.Diagnostics.Any(item => item.Code == AnalysisIssueCode.DuplicatePackageId.ToString()) &&
+        duplicateAnalysis.Explainability.GetMod("example.analysis.alpha") is not null,
+    "Duplicate installed package IDs prevented explainability publication.");
 var analysisLockedFirst = await analysisEngine.AnalyzeAsync(new ModAnalysisRequest(
     [analysisAlpha, analysisBeta], ["example.analysis.alpha", "example.analysis.beta"], "1.6",
     [new UserLoadOrderLock("example.analysis.alpha", 0, analysisObservedAt)]));

@@ -14,7 +14,9 @@ if ($textureView.Contains('SpecialFolder.MyDocuments')) { throw 'TextureToolsVie
 if ($textureEngine.Contains('Path.GetTempPath')) { throw 'TextureConversionEngine still discovers its own scratch root.' }
 if ($sessionService.Contains('Directory.GetCurrentDirectory')) { throw 'ForgeSessionService still invents a workspace from the current directory.' }
 
-$scatteredCurrentDirectory = rg -l 'Environment\.CurrentDirectory|Directory\.GetCurrentDirectory' (Join-Path $root 'src') -g '*.cs' |
+$scatteredCurrentDirectory = Get-ChildItem (Join-Path $root 'src') -Recurse -Filter '*.cs' -File |
+    Select-String -Pattern 'Environment\.CurrentDirectory|Directory\.GetCurrentDirectory' |
+    Select-Object -ExpandProperty Path -Unique |
     Where-Object { $_ -notmatch 'RimForgePaths\.cs$' }
 if ($scatteredCurrentDirectory) { throw "Current-directory discovery escaped RimForgePathLayout: $($scatteredCurrentDirectory -join ', ')" }
 

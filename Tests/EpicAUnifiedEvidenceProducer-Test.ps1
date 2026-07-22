@@ -14,7 +14,8 @@ if (-not $pipeline.Contains('RF-EVIDENCE-PRODUCER-FAILED')) { throw 'Producer fa
 if (-not $factory.Contains('ForgeEvidenceProducerFactory')) { throw 'The built-in producer factory is missing.' }
 if (-not $persistence.Contains('JsonPropertyName("contributorDiagnostics")')) { throw 'Snapshot compatibility for pre-migration diagnostics was not preserved.' }
 
-$legacy = rg -n 'IForgeEvidenceContributor|ForgeEvidenceContributor|ContributorId' (Join-Path $root 'src') -g '*.cs'
+$legacy = Get-ChildItem (Join-Path $root 'src') -Recurse -Filter '*.cs' -File |
+    Select-String -Pattern 'IForgeEvidenceContributor|ForgeEvidenceContributor|ContributorId'
 if ($legacy) { throw "Legacy evidence contributor contracts remain: $($legacy -join '; ')" }
 
 Write-Output 'Epic A unified evidence producer contract verified.'

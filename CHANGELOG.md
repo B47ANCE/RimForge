@@ -1,4 +1,12 @@
-# Unreleased — Epic D Pass 1 ForgeView Graph Domain Boundary
+# Unreleased — Companion Gate 2 Runtime Integration
+
+## Fixed
+
+- Made analysis explainability tolerate duplicate installed package IDs while preserving duplicate diagnostics.
+- Removed clean-runner dependencies on `rg`, made repository-boundary tests valid in standalone checkouts, and made `.gitignore` assertions newline-independent.
+- Advanced the Client version to `2.2.0-alpha.70`.
+
+# Previous Unreleased — Epic D Pass 1 ForgeView Graph Domain Boundary
 
 ## Changed
 

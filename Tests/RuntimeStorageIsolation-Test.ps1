@@ -6,11 +6,11 @@ function Assert-FileContains([string]$Path, [string]$Pattern, [string]$Message) 
     if ($content -notmatch $Pattern) { throw $Message }
 }
 
-Assert-FileContains '.gitignore' '(?m)^/Output/$' '.gitignore must ignore only the root legacy Output runtime data.'
-Assert-FileContains '.gitignore' '(?m)^/Logs/$' '.gitignore must ignore only the root legacy Logs runtime data.'
-Assert-FileContains '.gitignore' '(?m)^/Cache/$' '.gitignore must ignore only the root legacy Cache runtime data.'
-Assert-FileContains '.gitignore' '(?m)^/Temp/$' '.gitignore must ignore only the root legacy Temp runtime data.'
-Assert-FileContains '.gitignore' '(?m)^/Exports/$' '.gitignore must ignore only the root legacy Exports runtime data.'
+Assert-FileContains '.gitignore' '(?m)^/Output/\r?$' '.gitignore must ignore only the root legacy Output runtime data.'
+Assert-FileContains '.gitignore' '(?m)^/Logs/\r?$' '.gitignore must ignore only the root legacy Logs runtime data.'
+Assert-FileContains '.gitignore' '(?m)^/Cache/\r?$' '.gitignore must ignore only the root legacy Cache runtime data.'
+Assert-FileContains '.gitignore' '(?m)^/Temp/\r?$' '.gitignore must ignore only the root legacy Temp runtime data.'
+Assert-FileContains '.gitignore' '(?m)^/Exports/\r?$' '.gitignore must ignore only the root legacy Exports runtime data.'
 Assert-FileContains 'src/RimForge.Core/Models/RimForgePaths.cs' 'Environment\.SpecialFolder\.LocalApplicationData' 'Runtime paths must use LocalApplicationData.'
 Assert-FileContains 'src/RimForge.Core/Models/RimForgePaths.cs' 'Path\.Combine\(localAppData, "RimForge"\)' 'Runtime data must be scoped beneath the RimForge application directory.'
 Assert-FileContains 'src/RimForge.Core/Models/RimForgePaths.cs' 'Path\.Combine\(applicationDataRoot, configuredOutput\)' 'Relative output paths must resolve outside the repository.'
