@@ -128,6 +128,15 @@ RimForge is currently implementing **Epic C — Library and Profiles**. Work bui
 - [x] rename and deletion continuity updates
 - [x] no additional UI-owned persistence format
 
+### Pass 7: canonical workspace adoption
+
+- [x] live client ownership of one library/profile workspace snapshot
+- [x] refresh after library discovery and profile catalog loading
+- [x] refresh after in-place Mod Sorter and Issue Viewer profile saves
+- [x] active profile rows sourced from canonical resolution
+- [x] inactive installed inventory sourced from canonical projection
+- [x] workspace fingerprint surfaced in client diagnostics
+
 ## Later epics
 
 - **Epic C:** Library and Profiles

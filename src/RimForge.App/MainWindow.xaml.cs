@@ -45,6 +45,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly IDiagnosticService _diagnosticService;
     private readonly NativeForgeRunner _nativeForgeRunner;
     private readonly IModLibraryService _modLibraryService;
+    private readonly ILibraryProfileProjectionService _libraryProfileProjectionService;
     private readonly IModAnalysisEngine _analysisEngine;
     private readonly IForgeEvidenceService _forgeEvidenceService;
     private readonly IForgeEvidenceBus _forgeEvidenceBus;
@@ -155,6 +156,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly HashSet<string> _favoriteProfileNames = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _lockedProfileNames = new(StringComparer.OrdinalIgnoreCase);
     private ProfileCatalogState _profileCatalogState = ProfileCatalogState.Empty;
+    private LibraryProfileWorkspaceSnapshot _libraryProfileWorkspace = new(
+        Array.Empty<ModRecord>(), Array.Empty<ProfileLibraryProjection>(), Array.Empty<string>(), string.Empty, DateTimeOffset.MinValue);
     private bool _isFirstRunGuideVisible;
     private bool _isNativeScanVisible;
     private bool _isNativeScanComplete;
@@ -1163,6 +1166,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _lifecycleService.Transition(ApplicationLifecycleState.Starting, "Composition", "Application services were composed successfully.");
         StartupTimeline.Mark("Application service composition completed", "Composition");
         _modLibraryService = services.ModLibraryService;
+        _libraryProfileProjectionService = services.LibraryProfileProjectionService;
         _analysisEngine = services.AnalysisEngine;
         _forgeEvidenceService = services.ForgeEvidenceService;
         _forgeEvidenceBus = services.ForgeEvidenceBus;
@@ -2686,6 +2690,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 .ToList();
 
             Profiles.ReplaceAll(ordered);
+            RefreshLibraryProfileWorkspace();
             SelectedProfile = Profiles.FirstOrDefault(p => p.Name.Equals(selectedName, StringComparison.OrdinalIgnoreCase))
                               ?? Profiles.FirstOrDefault(p => !p.IsBuiltIn)
                               ?? Profiles.FirstOrDefault();
@@ -3492,6 +3497,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
 
 
+    private void RefreshLibraryProfileWorkspace()
+    {
+        _libraryProfileWorkspace = _libraryProfileProjectionService.Create(
+            Mods.ToArray(),
+            Profiles.ToArray());
+        Append(
+            $"Library/profile workspace synchronized: {_libraryProfileWorkspace.InstalledMods.Count} installed mod(s), " +
+            $"{_libraryProfileWorkspace.Profiles.Count} profile(s), fingerprint {_libraryProfileWorkspace.Fingerprint[..12]}.",
+            ActivitySeverity.Info);
+    }
+
     private void RebuildProfileLoadOrder()
     {
         _undoService.Clear();
@@ -3520,7 +3536,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     .First(),
                 StringComparer.OrdinalIgnoreCase);
 
-        var activeIds = LoadOrderRules.Normalize(SelectedProfile.ActiveMods).ToList();
+        var selectedProjection = _libraryProfileWorkspace.FindProfile(SelectedProfile.Name);
+        var projectedActiveIds = selectedProjection?.ActiveMods.Select(item => item.PackageId)
+            ?? SelectedProfile.ActiveMods;
+        var activeIds = LoadOrderRules.Normalize(projectedActiveIds).ToList();
 
         if (SelectedProfile.IsBuiltIn)
         {
@@ -3551,7 +3570,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 analysis?.HealthLabel));
         }
 
-        var inactiveItems = BuildInactiveProfileItems(activeSet);
+        var inactiveItems = SelectedProfile.IsBuiltIn || selectedProjection is null
+            ? BuildInactiveProfileItems(activeSet)
+            : BuildInactiveProfileItems(activeSet, selectedProjection.InactiveInstalledMods);
 
         ActiveProfileMods.ReplaceAll(activeItems);
         InactiveInstalledMods.ReplaceAll(inactiveItems);
@@ -3561,8 +3582,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Notify(nameof(ModSorterScopeText));
     }
 
-    private ProfileLoadOrderItemViewModel[] BuildInactiveProfileItems(IReadOnlySet<string> activeSet) =>
-        Mods
+    private ProfileLoadOrderItemViewModel[] BuildInactiveProfileItems(
+        IReadOnlySet<string> activeSet,
+        IEnumerable<ModRecord>? source = null) =>
+        (source ?? Mods)
             .Where(mod => !string.IsNullOrWhiteSpace(mod.PackageId) && !activeSet.Contains(mod.PackageId!))
             .GroupBy(mod => mod.PackageId!, StringComparer.OrdinalIgnoreCase)
             .Select(group => group

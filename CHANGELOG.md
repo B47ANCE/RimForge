@@ -1,4 +1,18 @@
-# Unreleased — Epic C Pass 6 Profile Workspace Continuity
+# Unreleased — Epic C Pass 7 Canonical Workspace Adoption
+
+## Changed
+
+- Adopted `LibraryProfileWorkspaceSnapshot` as live client state after library and profile loading.
+- Rebuild active profile rows from canonical package resolution and inactive rows from canonical installed inventory.
+- Refresh the workspace snapshot after Mod Sorter and Issue Viewer profile saves.
+- Surface the current deterministic workspace fingerprint in client activity diagnostics.
+- Advanced the client version to `2.2.0-alpha.67`.
+
+## Added
+
+- Added an acceptance gate preventing profile UI projections from drifting back to independent joins.
+
+# Previous Unreleased — Epic C Pass 6 Profile Workspace Continuity
 
 ## Added
 

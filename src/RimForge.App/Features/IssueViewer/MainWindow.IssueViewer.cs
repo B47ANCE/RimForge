@@ -94,6 +94,7 @@ public partial class MainWindow
             }
             var index = Profiles.IndexOf(SelectedProfile);
             if (index >= 0) Profiles[index] = result.UpdatedProfile;
+            RefreshLibraryProfileWorkspace();
             SelectedProfile = result.UpdatedProfile;
             IsLoadOrderDirty = false;
         }
