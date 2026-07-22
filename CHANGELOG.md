@@ -1,4 +1,18 @@
-# Unreleased — Epic C Pass 7 Canonical Workspace Adoption
+# Unreleased — Epic C Pass 8 Canonical Profile Readiness
+
+## Added
+
+- Added deterministic ready, warning, and blocked status to every canonical profile projection.
+- Added readiness reasons for missing Core, missing or ambiguous installations, duplicate active entries, and target-version incompatibility.
+- Added behavioral coverage for ready, warning, and blocked profiles.
+
+## Changed
+
+- Profile management now surfaces canonical readiness alongside edit and lock state.
+- Activation is blocked before any RimWorld configuration write when canonical readiness is blocked.
+- Advanced the client version to `2.2.0-alpha.68`.
+
+# Previous Unreleased — Epic C Pass 7 Canonical Workspace Adoption
 
 ## Changed
 

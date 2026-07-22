@@ -896,6 +896,8 @@ var projectedProfile = projectedWorkspace.FindProfile("projection profile");
 Require(projectedProfile is not null, "Library/profile projection lookup was not case insensitive.");
 Require(projectedProfile!.InstalledCount == 1 && projectedProfile.MissingCount == 1 && projectedProfile.AmbiguousCount == 1,
     "Library/profile projection did not classify installed, missing, and ambiguous references.");
+Require(projectedProfile.Readiness.Status == ProfileReadinessStatus.Blocked && !projectedProfile.Readiness.HasCore,
+    "Profile readiness did not block unresolved profiles without Core.");
 Require(projectedProfile.InactiveInstalledMods.Count == 1 &&
         projectedProfile.InactiveInstalledMods[0].PackageId == "example.analysis.beta",
     "Library/profile projection did not expose the inactive installed inventory.");
@@ -911,6 +913,17 @@ var coreMod = new ModRecord
 };
 var editableProfile = projectionProfile with { ActiveMods = ["ludeon.rimworld", "example.analysis.alpha"] };
 var editableWorkspace = libraryProjection.Create([coreMod, analysisAlpha, analysisBeta], [editableProfile]);
+Require(editableWorkspace.FindProfile(editableProfile.Name)?.Readiness.Status == ProfileReadinessStatus.Ready,
+    "Profile readiness did not recognize a fully resolved profile.");
+var incompatibleAlpha = new ModRecord
+{
+    Id = "incompatible-alpha", PackageId = "example.analysis.alpha", Name = "Analysis Alpha",
+    FolderName = "AnalysisAlpha", RootPath = "incompatible/alpha", AboutPath = "incompatible/alpha/About/About.xml",
+    SupportedVersions = ["1.5"]
+};
+var warningWorkspace = libraryProjection.Create([coreMod, incompatibleAlpha], [editableProfile]);
+Require(warningWorkspace.FindProfile(editableProfile.Name)?.Readiness.Status == ProfileReadinessStatus.Warning,
+    "Profile readiness did not warn about target-version incompatibility.");
 var profileEditor = new ProfileEditService(null!);
 var editDraft = profileEditor.CreateDraft(
     editableWorkspace,

@@ -581,11 +581,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public bool IsForgeRunning => ForgeSession.Status is ForgeSessionStatus.Running or ForgeSessionStatus.Cancelling;
     public bool CanLaunchForgedProfile => ForgeSession.CanLaunchProfile;
     public string ForgeElapsedText => ForgeSession.StartedUtc is null ? string.Empty : $"Elapsed {(ForgeSession.CompletedUtc ?? DateTimeOffset.UtcNow) - ForgeSession.StartedUtc:hh\\:mm\\:ss}";
-    public string SelectedProfileStateText => SelectedProfile is null
-        ? "No profile selected"
-        : SelectedProfile.IsBuiltIn ? "Official DLC only"
-        : SelectedProfile.IsLocked ? "Locked"
-        : "Editable";
+    public ProfileReadinessSummary? SelectedProfileReadiness => SelectedProfile is null
+        ? null
+        : _libraryProfileWorkspace.FindProfile(SelectedProfile.Name)?.Readiness;
+    public string SelectedProfileStateText
+    {
+        get
+        {
+            if (SelectedProfile is null) return "No profile selected";
+            var editState = SelectedProfile.IsBuiltIn ? "Official DLC only" : SelectedProfile.IsLocked ? "Locked" : "Editable";
+            return SelectedProfileReadiness?.Status switch
+            {
+                ProfileReadinessStatus.Blocked => $"{editState} · Activation blocked",
+                ProfileReadinessStatus.Warning => $"{editState} · Compatibility warning",
+                ProfileReadinessStatus.Ready => $"{editState} · Ready",
+                _ => editState
+            };
+        }
+    }
 
     public string SelectedProfileModCountText
     {
@@ -1139,6 +1152,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             Notify(nameof(ActiveProfileIssueSummary));
             Notify(nameof(ModSorterScopeText));
             Notify(nameof(SelectedProfileStateText));
+            Notify(nameof(SelectedProfileReadiness));
             Notify(nameof(SelectedProfileModCountText));
             Notify(nameof(SelectedProfileFavoriteGlyph));
             Notify(nameof(IsSelectedProfileFavorite));
@@ -3101,6 +3115,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (SelectedProfile is null) return;
         var profile = SelectedProfile;
+        var readiness = _libraryProfileWorkspace.FindProfile(profile.Name)?.Readiness;
+        if (readiness is { CanActivate: false })
+        {
+            var message = readiness.Reasons.FirstOrDefault() ?? "The profile has unresolved library references.";
+            Append($"Profile activation blocked: {message}", ActivitySeverity.Error);
+            _notificationService.Enqueue(new NotificationRequest(
+                "Profile activation blocked",
+                message,
+                NotificationSeverity.Error,
+                [new NotificationAction("view-activity", "View Details")]));
+            return;
+        }
         var result = await RunFeatureTaskAsync(
             "profile.activate",
             "Activate Profile",
@@ -3506,6 +3532,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             $"Library/profile workspace synchronized: {_libraryProfileWorkspace.InstalledMods.Count} installed mod(s), " +
             $"{_libraryProfileWorkspace.Profiles.Count} profile(s), fingerprint {_libraryProfileWorkspace.Fingerprint[..12]}.",
             ActivitySeverity.Info);
+        Notify(nameof(SelectedProfileReadiness));
+        Notify(nameof(SelectedProfileStateText));
     }
 
     private void RebuildProfileLoadOrder()

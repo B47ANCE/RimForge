@@ -137,6 +137,15 @@ RimForge is currently implementing **Epic C — Library and Profiles**. Work bui
 - [x] inactive installed inventory sourced from canonical projection
 - [x] workspace fingerprint surfaced in client diagnostics
 
+### Pass 8: canonical profile readiness
+
+- [x] deterministic ready, warning, and blocked states
+- [x] missing Core and unresolved installation detection
+- [x] duplicate active entry detection
+- [x] target RimWorld version compatibility warnings
+- [x] readiness surfaced in profile management UI
+- [x] unsafe activation blocked before RimWorld configuration changes
+
 ## Later epics
 
 - **Epic C:** Library and Profiles

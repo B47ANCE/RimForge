@@ -44,6 +44,7 @@ This directory contains current engineering references. Product-level entry poin
 - [`development/EPIC_C_PASS5_VERIFIED_PROFILE_PORTABILITY.md`](development/EPIC_C_PASS5_VERIFIED_PROFILE_PORTABILITY.md) — safe package inspection and compatibility preview before import
 - [`development/EPIC_C_PASS6_PROFILE_WORKSPACE_CONTINUITY.md`](development/EPIC_C_PASS6_PROFILE_WORKSPACE_CONTINUITY.md) — persistent profile selection and library scope
 - [`development/EPIC_C_PASS7_CANONICAL_WORKSPACE_ADOPTION.md`](development/EPIC_C_PASS7_CANONICAL_WORKSPACE_ADOPTION.md) — live client adoption of the unified library/profile snapshot
+- [`development/EPIC_C_PASS8_CANONICAL_PROFILE_READINESS.md`](development/EPIC_C_PASS8_CANONICAL_PROFILE_READINESS.md) — deterministic activation readiness and safety enforcement
 - [`development/FORGE_SESSION_FOUNDATION.md`](development/FORGE_SESSION_FOUNDATION.md) — Forge lifecycle and persistence
 - [`development/PLATFORM_DISCOVERY_FOUNDATION.md`](development/PLATFORM_DISCOVERY_FOUNDATION.md) — Steam, RimWorld, and workspace discovery
 - [`development/COMPANION_HOST_FOUNDATION.md`](development/COMPANION_HOST_FOUNDATION.md) — hidden Companion process and client control surface
