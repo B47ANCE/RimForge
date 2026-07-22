@@ -8,7 +8,8 @@ public sealed class RepairPlanner
     public RepairPlan Build(
         IssueWorkItem issue,
         IReadOnlyCollection<ModRecord> mods,
-        string? selectedCycleFirstPackageId = null)
+        string? selectedCycleFirstPackageId = null,
+        RepairPlanningContext? context = null)
     {
         ArgumentNullException.ThrowIfNull(issue);
         ArgumentNullException.ThrowIfNull(mods);
@@ -23,7 +24,7 @@ public sealed class RepairPlanner
                 ? name
                 : packageId ?? "Unknown mod";
 
-        return issue.RepairAction switch
+        var plan = issue.RepairAction switch
         {
             RepairActionKind.InstallDependency => BuildDependencyPlan(issue, NameOf),
             RepairActionKind.ActivateDependency => BuildActivationPlan(issue, NameOf),
@@ -31,6 +32,94 @@ public sealed class RepairPlanner
             RepairActionKind.DisableDuplicate => BuildDuplicatePlan(issue, NameOf),
             RepairActionKind.ReviewCycle => BuildCyclePlan(issue, NameOf, selectedCycleFirstPackageId),
             _ => BuildManualPlan(issue, NameOf),
+        };
+        return Enrich(plan, issue, mods, context);
+    }
+
+    public static RepairPlanningContext CaptureContext(RimForgeProfile? profile)
+    {
+        var configDirectory = string.IsNullOrWhiteSpace(profile?.ModsConfigPath)
+            ? null
+            : Path.GetDirectoryName(profile.ModsConfigPath);
+        return new RepairPlanningContext(
+            profile?.Name,
+            profile?.WorkspacePath,
+            profile?.ModsConfigPath,
+            profile is not null,
+            profile?.IsLocked == true,
+            !string.IsNullOrWhiteSpace(profile?.WorkspacePath) && Directory.Exists(profile.WorkspacePath),
+            !string.IsNullOrWhiteSpace(configDirectory) && Directory.Exists(configDirectory));
+    }
+
+    private static RepairPlan Enrich(
+        RepairPlan plan,
+        IssueWorkItem issue,
+        IReadOnlyCollection<ModRecord> mods,
+        RepairPlanningContext? context)
+    {
+        var affectedIds = issue.RelatedPackageIds
+            .Append(issue.PackageId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var installedIds = mods
+            .Select(mod => mod.PackageId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var mutatesProfile = issue.RepairAction is RepairActionKind.ReorderProfile or RepairActionKind.ActivateDependency or RepairActionKind.ReviewCycle;
+        var preconditions = new List<RepairPrecondition>
+        {
+            new(RepairPreconditionKind.AffectedModAvailable, issue.PackageId,
+                installedIds.Contains(issue.PackageId), $"Affected mod '{issue.PackageId}' is no longer installed.")
+        };
+        if (mutatesProfile)
+        {
+            preconditions.Add(new(RepairPreconditionKind.ActiveProfile, context?.ProfileName ?? "Active profile",
+                context?.HasActiveProfile == true, "Select an active profile before applying this repair."));
+            preconditions.Add(new(RepairPreconditionKind.ProfileUnlocked, context?.ProfileName ?? "Active profile",
+                context?.HasActiveProfile == true && context.IsProfileLocked == false, "Unlock the active profile before applying this repair."));
+            preconditions.Add(new(RepairPreconditionKind.WorkspaceAvailable, context?.WorkspacePath ?? "Profile workspace",
+                context?.WorkspaceExists == true, "The profile workspace is unavailable."));
+            preconditions.Add(new(RepairPreconditionKind.ConfigurationDirectoryAvailable, context?.ModsConfigPath ?? "ModsConfig directory",
+                context?.ModsConfigDirectoryExists == true, "The RimWorld configuration directory is unavailable."));
+        }
+
+        var safety = plan.IsDestructive
+            ? RepairSafetyClass.Destructive
+            : plan.ExecutionMode == RepairExecutionMode.Automatic && !plan.RequiresConfirmation
+                ? RepairSafetyClass.SafeAutomatic
+                : plan.Status == RepairPlanStatus.Unsupported
+                    ? RepairSafetyClass.Unsupported
+                    : RepairSafetyClass.ConfirmationRequired;
+        var confidence = issue.RepairAction == RepairActionKind.ReorderProfile
+            ? RepairConfidence.High
+            : issue.RelatedPackageIds.Count > 0 ? RepairConfidence.Medium : RepairConfidence.Low;
+        var status = plan.Status == RepairPlanStatus.Ready && preconditions.Any(item => !item.IsSatisfied)
+            ? RepairPlanStatus.BlockedByPreconditions
+            : plan.Status;
+        var paths = new[] { context?.WorkspacePath, context?.ModsConfigPath }
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var key = string.Join("|", new[] { issue.Id, issue.RepairAction.ToString(), context?.ProfileName ?? "no-profile" }
+            .Concat(affectedIds).Select(value => value.Trim().ToLowerInvariant()));
+
+        return plan with
+        {
+            Status = status,
+            Confidence = confidence,
+            SafetyClass = safety,
+            Evidence =
+            [
+                new($"issue:{issue.Id}", "CanonicalAnalysis", issue.Explanation, issue.PackageId),
+                new($"recommendation:{issue.Code}", "RepairRecommendation", issue.RecommendedAction, issue.PackageId)
+            ],
+            Preconditions = preconditions,
+            Preview = new RepairPreview(plan.Summary, affectedIds, paths, PerformsWrites: false),
+            DeterministicKey = key
         };
     }
 

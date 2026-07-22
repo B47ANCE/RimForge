@@ -1,4 +1,12 @@
-# Unreleased — Epic D Pass 4 Cohesive ForgeView Workflow
+# Unreleased — Epic E Pass 1 Deterministic Repair Planning
+
+- Extended immutable repair plans with canonical evidence, confidence, safety classification, no-write previews, deterministic keys, and explicit preconditions.
+- Captured active-profile, lock, workspace, configuration-directory, and installed-mod conditions during read-only planning.
+- Blocked automatic repair before mutation when a freshly evaluated plan has unsatisfied preconditions.
+- Surfaced confidence, safety, evidence, and precondition state in Repair Preview.
+- Added executable determinism and mutation-boundary coverage and advanced the Client version to `2.2.0-alpha.74`.
+
+# 2.2.0-alpha.73 — Epic D Pass 4 Cohesive ForgeView Workflow
 
 - Converged search, Issue Viewer, profile, graph, outline, history, and Inspector navigation on the canonical selected-mod service while preserving navigation origin.
 - Added actionable loading, empty-library, failed-discovery, and degraded-runtime-evidence workspace states.

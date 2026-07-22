@@ -216,9 +216,9 @@ Work follows the product dependency chain: runtime evidence → analysis → pro
 
 ### Pass 1: deterministic repair planning
 
-- [ ] immutable repair plans with evidence, confidence, safety class, and preview
-- [ ] no-write analysis separated from explicit execution
-- [ ] profile and filesystem preconditions validated before mutation
+- [x] immutable repair plans with evidence, confidence, safety class, and preview
+- [x] no-write analysis separated from explicit execution
+- [x] profile and filesystem preconditions validated before mutation
 
 ### Pass 2: transactional execution and recovery
 

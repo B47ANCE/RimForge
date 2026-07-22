@@ -1078,6 +1078,28 @@ canonicalSelection.Select(analysisAlpha, ForgeGraphQueryOrigin.Profile);
 Require(canonicalSelection.Origin == ForgeGraphQueryOrigin.Profile,
     "Canonical selected-mod context ignored an origin change for the same mod.");
 
+var repairPlanner = new RepairPlanner();
+var repairIssue = new IssueWorkItem(
+    "repair-fixture", analysisAlpha.PackageId!, analysisAlpha.DisplayName, AnalysisIssueCode.LoadOrderViolation,
+    AnalysisIssueSeverity.Warning, "Load order", "Dependency order needs repair",
+    "The affected mod loads before a required dependency.", "RimWorld may initialize the mod before its dependency.",
+    "Apply the canonical dependency-safe order.", RepairActionKind.ReorderProfile, IssueResolutionKind.Automatic,
+    true, false, [analysisBeta.PackageId!], [analysisBeta.DisplayName]);
+var blockedRepair = repairPlanner.Build(repairIssue, [analysisAlpha, analysisBeta]);
+Require(blockedRepair.Status == RepairPlanStatus.BlockedByPreconditions && !blockedRepair.CanExecute,
+    "Repair planning did not block a profile mutation with missing profile/filesystem preconditions.");
+var readyContext = new RepairPlanningContext("Fixture", "C:/fixture/workspace", "C:/fixture/ModsConfig.xml", true, false, true, true);
+var readyRepair = repairPlanner.Build(repairIssue, [analysisAlpha, analysisBeta], context: readyContext);
+var repeatedRepair = repairPlanner.Build(repairIssue, [analysisBeta, analysisAlpha], context: readyContext);
+Require(readyRepair.CanExecute && readyRepair.Confidence == RepairConfidence.High &&
+        readyRepair.SafetyClass == RepairSafetyClass.ConfirmationRequired,
+    "Repair plan did not expose executable confidence and safety classification.");
+Require(readyRepair.Evidence.Count == 2 && readyRepair.Preconditions.All(item => item.IsSatisfied) &&
+        !readyRepair.Preview.PerformsWrites && readyRepair.Preview.AffectedPackageIds.Count == 2,
+    "Repair plan did not retain immutable evidence, preconditions, or a no-write preview.");
+Require(readyRepair.DeterministicKey == repeatedRepair.DeterministicKey,
+    "Repair planning was not deterministic across equivalent mod input ordering.");
+
 Console.WriteLine("RimForge.ExecutionTests: PASSED");
 return;
 

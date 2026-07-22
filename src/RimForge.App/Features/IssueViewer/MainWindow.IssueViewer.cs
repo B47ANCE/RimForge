@@ -50,11 +50,11 @@ public partial class MainWindow
     {
         var issue = (e.OriginalSource as FrameworkElement)?.DataContext as IssueWorkItem ?? SelectedIssueItem;
         if (issue is null || issue.IsIgnored) return;
-        var plan = _repairPlanner.Build(issue, Mods.ToList());
-        if (!issue.CanAutoFix || plan.Status != RepairPlanStatus.Ready || plan.ExecutionMode != RepairExecutionMode.Automatic)
+        var plan = BuildRepairPlan(issue);
+        if (!issue.CanAutoFix || !plan.CanExecute || plan.ExecutionMode != RepairExecutionMode.Automatic)
         {
             ForgeDialogService.ShowRepairPreview(this, plan.Title, plan.Summary,
-                plan.Steps.Select(step => $"{step.Order}. {step.Action}: {step.TargetName}").ToArray(),
+                BuildRepairPreviewDetails(plan),
                 plan.ChoicePackageIds.Select(GetDisplayNameForPackageId).ToArray(), plan.ExpectedResult);
             return;
         }
@@ -65,6 +65,16 @@ public partial class MainWindow
 
     private async Task ExecuteAutomaticRepairAsync(IssueWorkItem issue)
     {
+        var plan = BuildRepairPlan(issue);
+        if (!plan.CanExecute)
+        {
+            var failures = plan.Preconditions.Where(item => !item.IsSatisfied).Select(item => item.FailureMessage).ToArray();
+            ForgeDialogService.ShowRepairPreview(this, plan.Title, plan.Summary,
+                BuildRepairPreviewDetails(plan),
+                failures, plan.ExpectedResult);
+            Append($"Repair blocked before mutation: {string.Join(" ", failures)}", ActivitySeverity.Warning);
+            return;
+        }
         if (issue.RepairAction != RepairActionKind.ReorderProfile || SelectedProfile is null) return;
         var changed = ApplyOptimizedLoadOrder(false);
         if (changed)
@@ -135,8 +145,8 @@ public partial class MainWindow
     {
         var automatic = IssueItems
             .Where(issue => issue.CanAutoFix && !issue.IsIgnored)
-            .Where(issue => _repairPlanner.Build(issue, Mods.ToList()) is
-                { Status: RepairPlanStatus.Ready, ExecutionMode: RepairExecutionMode.Automatic })
+            .Where(issue => BuildRepairPlan(issue) is
+                { CanExecute: true, ExecutionMode: RepairExecutionMode.Automatic })
             .ToArray();
         if (automatic.Length == 0) return;
 
@@ -149,6 +159,17 @@ public partial class MainWindow
             return;
         await ExecuteAutomaticRepairAsync(automatic[0]);
     }
+
+    private RepairPlan BuildRepairPlan(IssueWorkItem issue, string? selectedCycleFirstPackageId = null) =>
+        _repairPlanner.Build(issue, Mods.ToList(), selectedCycleFirstPackageId, RepairPlanner.CaptureContext(SelectedProfile));
+
+    private static IReadOnlyList<string> BuildRepairPreviewDetails(RepairPlan plan) =>
+    [
+        $"Confidence: {plan.Confidence} • Safety: {plan.SafetyClass}",
+        $"Evidence: {string.Join("; ", plan.Evidence.Select(item => item.Summary))}",
+        .. plan.Preconditions.Select(item => $"Precondition {(item.IsSatisfied ? "ready" : "blocked")}: {item.Target}"),
+        .. plan.Steps.Select(step => $"{step.Order}. {step.Action}: {step.TargetName}")
+    ];
 
     private void IssueViewer_ModNavigationRequested(object? sender, IssueModNavigationRequestedEventArgs e)
     {
