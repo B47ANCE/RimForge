@@ -56,6 +56,12 @@ public interface IProfileEditService
         CancellationToken cancellationToken = default);
 }
 
+public interface IProfileCatalogStateStore
+{
+    ProfileCatalogState Load(string profilesRoot);
+    ProfileCatalogState Save(string profilesRoot, ProfileCatalogState state);
+}
+
 public interface IProfileWorkspaceService
 {
     Task<IReadOnlyList<RimForgeProfile>> LoadProfilesAsync(

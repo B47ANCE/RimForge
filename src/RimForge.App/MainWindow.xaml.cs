@@ -57,6 +57,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly IssueEngine _issueEngine = new();
     private readonly RepairPlanner _repairPlanner = new();
     private readonly IProfileWorkspaceService _profileWorkspaceService;
+    private readonly IProfileCatalogStateStore _profileCatalogStateStore;
     private readonly IExternalProfileReconciliationService _externalProfileReconciliationService;
     private readonly IExternalProfileConflictService _externalProfileConflictService;
     private readonly IModsConfigChangeMonitor _modsConfigChangeMonitor;
@@ -1168,6 +1169,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _dependencyManagementService = services.DependencyManagementService;
         _nativeForgeRunner = new NativeForgeRunner(_forgeDnaService);
         _profileWorkspaceService = services.ProfileWorkspaceService;
+        _profileCatalogStateStore = services.ProfileCatalogStateStore;
         _externalProfileReconciliationService = services.ExternalProfileReconciliationService;
         _externalProfileConflictService = services.ExternalProfileConflictService;
         _modsConfigChangeMonitor = services.ModsConfigChangeMonitor;
@@ -2696,8 +2698,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private string ProfileShellStatePath => Path.Combine(RuntimePaths.ProfilesRoot, "ProfileShellState.json");
-
     private RimForgeProfile ApplyProfileShellState(RimForgeProfile profile)
     {
         var locked = profile.IsBuiltIn || _lockedProfileNames.Contains(profile.Name);
@@ -2708,44 +2708,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         _favoriteProfileNames.Clear();
         _lockedProfileNames.Clear();
-        if (!File.Exists(ProfileShellStatePath)) return;
-
-        try
-        {
-            using var document = JsonDocument.Parse(File.ReadAllText(ProfileShellStatePath));
-            if (document.RootElement.TryGetProperty("favorites", out var favorites))
-            {
-                foreach (var item in favorites.EnumerateArray())
-                {
-                    var name = item.GetString();
-                    if (!string.IsNullOrWhiteSpace(name)) _favoriteProfileNames.Add(name);
-                }
-            }
-
-            if (document.RootElement.TryGetProperty("locked", out var locked))
-            {
-                foreach (var item in locked.EnumerateArray())
-                {
-                    var name = item.GetString();
-                    if (!string.IsNullOrWhiteSpace(name)) _lockedProfileNames.Add(name);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Append("Profile shell state could not be loaded: " + ex.Message, ActivitySeverity.Warning);
-        }
+        var state = _profileCatalogStateStore.Load(RuntimePaths.ProfilesRoot);
+        _favoriteProfileNames.UnionWith(state.FavoriteProfileNames);
+        _lockedProfileNames.UnionWith(state.LockedProfileNames);
     }
 
     private void SaveProfileShellState()
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(ProfileShellStatePath)!);
-        var state = new
-        {
-            favorites = _favoriteProfileNames.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(),
-            locked = _lockedProfileNames.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray()
-        };
-        File.WriteAllText(ProfileShellStatePath, JsonSerializer.Serialize(state, RimForgeJson.Indented));
+        _profileCatalogStateStore.Save(
+            RuntimePaths.ProfilesRoot,
+            new ProfileCatalogState(
+                _favoriteProfileNames.ToArray(),
+                _lockedProfileNames.ToArray(),
+                DateTimeOffset.UtcNow));
     }
 
     private static string MakeSafeProfileName(string name)

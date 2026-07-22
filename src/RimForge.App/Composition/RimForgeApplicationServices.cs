@@ -38,6 +38,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
         IDependencyManagementService dependencyManagementService,
         IProfileWorkspaceService profileWorkspaceService,
         IProfileEditService profileEditService,
+        IProfileCatalogStateStore profileCatalogStateStore,
         IExternalProfileReconciliationService externalProfileReconciliationService,
         IExternalProfileConflictService externalProfileConflictService,
         IModsConfigChangeMonitor modsConfigChangeMonitor,
@@ -85,6 +86,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
         DependencyManagementService = dependencyManagementService;
         ProfileWorkspaceService = profileWorkspaceService;
         ProfileEditService = profileEditService;
+        ProfileCatalogStateStore = profileCatalogStateStore;
         ExternalProfileReconciliationService = externalProfileReconciliationService;
         ExternalProfileConflictService = externalProfileConflictService;
         ModsConfigChangeMonitor = modsConfigChangeMonitor;
@@ -133,6 +135,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
     public IDependencyManagementService DependencyManagementService { get; }
     public IProfileWorkspaceService ProfileWorkspaceService { get; }
     public IProfileEditService ProfileEditService { get; }
+    public IProfileCatalogStateStore ProfileCatalogStateStore { get; }
     public IExternalProfileReconciliationService ExternalProfileReconciliationService { get; }
     public IExternalProfileConflictService ExternalProfileConflictService { get; }
     public IModsConfigChangeMonitor ModsConfigChangeMonitor { get; }
@@ -234,6 +237,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
             dependencyManagementService,
             profileWorkspaceService,
             new ProfileEditService(profileWorkspaceService),
+            new ProfileCatalogStateStore(),
             new ExternalProfileReconciliationService(),
             new ExternalProfileConflictService(profileWorkspaceService),
             new ModsConfigChangeMonitor(),

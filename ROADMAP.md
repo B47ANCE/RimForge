@@ -101,6 +101,15 @@ RimForge is currently implementing **Epic C — Library and Profiles**. Work bui
 - [x] monitor acknowledgement only after successful file-changing resolutions
 - [x] main-client notification actions for every resolution choice
 
+### Pass 4: durable profile catalog state
+
+- [x] canonical typed favorite and lock metadata
+- [x] deterministic case-insensitive normalization
+- [x] atomic staged persistence
+- [x] automatic migration from legacy shell-owned state
+- [x] preservation through profile rename and removal workflows
+- [x] removal of direct profile catalog JSON handling from the UI
+
 ## Later epics
 
 - **Epic C:** Library and Profiles

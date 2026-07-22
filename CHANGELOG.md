@@ -1,4 +1,19 @@
-# Unreleased — Epic C Pass 3 External Profile Conflict Resolution
+# Unreleased — Epic C Pass 4 Durable Profile Catalog State
+
+## Added
+
+- Added a typed profile catalog state and canonical persistence service for favorite and locked profiles.
+- Added deterministic case-insensitive normalization and atomic staged writes.
+- Added automatic migration from the legacy `ProfileShellState.json` format.
+- Added behavioral coverage for migration, normalization, and canonical persistence.
+
+## Changed
+
+- Removed direct profile catalog JSON parsing and writing from `MainWindow`.
+- Retained favorite and lock metadata across existing rename, delete, and refresh workflows through the shared store.
+- Advanced the client version to `2.2.0-alpha.64`.
+
+# Previous Unreleased — Epic C Pass 3 External Profile Conflict Resolution
 
 ## Added
 

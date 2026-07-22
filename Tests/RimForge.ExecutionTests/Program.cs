@@ -936,6 +936,31 @@ var rejectedExternal = await externalConflictService.ResolveAsync(lockedExternal
 Require(!rejectedExternal.Success && rejectedExternal.Message.Contains("locked", StringComparison.OrdinalIgnoreCase),
     "Locked profile accepted external changes.");
 
+var catalogRoot = Path.Combine(Path.GetTempPath(), "rimforge-profile-catalog-" + Guid.NewGuid().ToString("N"));
+try
+{
+    Directory.CreateDirectory(catalogRoot);
+    await File.WriteAllTextAsync(
+        Path.Combine(catalogRoot, "ProfileShellState.json"),
+        "{\"favorites\":[\"Beta\",\"alpha\",\"ALPHA\"],\"locked\":[\"Locked Profile\"]}");
+    var catalogStore = new ProfileCatalogStateStore();
+    var migratedCatalog = catalogStore.Load(catalogRoot);
+    Require(migratedCatalog.FavoriteProfileNames.SequenceEqual(["alpha", "Beta"], StringComparer.OrdinalIgnoreCase),
+        "Profile catalog migration did not normalize favorites.");
+    Require(File.Exists(Path.Combine(catalogRoot, "ProfileCatalogState.json")),
+        "Legacy profile shell state was not migrated to the canonical catalog file.");
+    var savedCatalog = catalogStore.Save(catalogRoot, migratedCatalog with
+    {
+        FavoriteProfileNames = ["Gamma", "gamma", "Alpha"]
+    });
+    Require(savedCatalog.FavoriteProfileNames.SequenceEqual(["Alpha", "Gamma"], StringComparer.OrdinalIgnoreCase),
+        "Profile catalog persistence did not normalize duplicate names.");
+}
+finally
+{
+    if (Directory.Exists(catalogRoot)) Directory.Delete(catalogRoot, true);
+}
+
 Console.WriteLine("RimForge.ExecutionTests: PASSED");
 return;
 
