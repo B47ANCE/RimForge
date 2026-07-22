@@ -1036,6 +1036,40 @@ finally
     if (Directory.Exists(packageRoot)) Directory.Delete(packageRoot, true);
 }
 
+var graphQueryService = new ForgeGraphQueryService();
+var graphQueryFixture = new DependencyGraphModel(
+    [
+        new("alpha", "Alpha", "fixture.alpha", null, null, null, null, ["1.6"], null, ModHealthStatus.Warning),
+        new("beta", "Beta", "fixture.beta", null, null, null, null, ["1.6"], null, ModHealthStatus.Healthy),
+        new("gamma", "Gamma", "fixture.gamma", null, null, null, null, ["1.6"], null, ModHealthStatus.Healthy)
+    ],
+    [
+        new("fixture.alpha", "fixture.beta", DependencyRelationshipType.Required, "Alpha requires Beta", 1, ["About.xml"]),
+        new("fixture.gamma", "fixture.beta", DependencyRelationshipType.Optional, "Gamma integrates with Beta", 1, ["LoadFolders.xml"])
+    ]);
+var graphQueryResult = graphQueryService.Execute(graphQueryFixture, new ForgeGraphQuery(
+    ["fixture.alpha", "fixture.beta"], true, ["fixture.alpha", "fixture.beta", "fixture.gamma"], false,
+    null, [DependencyRelationshipType.Required], "fixture.alpha", false));
+Require(graphQueryResult.Nodes.Select(node => node.PackageId).SequenceEqual(["fixture.alpha", "fixture.beta"]),
+    "Canonical Forge graph query did not deterministically filter and order nodes.");
+Require(graphQueryResult.Edges.Count == 1 && graphQueryResult.Edges[0].Provenance is not null &&
+        graphQueryResult.Edges[0].Provenance!.SourceId == "About.xml",
+    "Canonical Forge graph query did not guarantee relationship provenance.");
+var emptySearchResult = graphQueryService.Execute(graphQueryFixture, new ForgeGraphQuery([], true));
+Require(emptySearchResult.Nodes.Count == 0 && emptySearchResult.Edges.Count == 0,
+    "An active Forge graph search with no matches did not produce an empty result.");
+
+var graphSelection = new ForgeGraphSelectionState();
+graphSelection.Select("fixture.alpha", ForgeGraphQueryOrigin.Search);
+graphSelection.Select("fixture.beta", ForgeGraphQueryOrigin.IssueNavigation);
+Require(graphSelection.Navigate(-1).SelectedPackageId == "fixture.alpha", "Forge graph selection history did not navigate backward deterministically.");
+graphSelection.Select("fixture.gamma", ForgeGraphQueryOrigin.Canvas);
+Require(graphSelection.Current.History.SequenceEqual(["fixture.alpha", "fixture.gamma"], StringComparer.OrdinalIgnoreCase),
+    "Selecting after history navigation did not truncate the stale forward branch.");
+graphSelection.Restore(["fixture.alpha", "fixture.beta"], 1, "fixture.beta", "fixture.beta");
+Require(graphSelection.Current.HistoryIndex == 1 && graphSelection.Current.FocusedPackageId == "fixture.beta",
+    "Profile-owned Forge selection state did not restore deterministically.");
+
 Console.WriteLine("RimForge.ExecutionTests: PASSED");
 return;
 

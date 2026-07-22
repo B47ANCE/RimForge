@@ -11,6 +11,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Win32;
 using RimForge.Core.Models;
+using RimForge.Core.Services;
 
 namespace RimForge.App.Features.ForgeView;
 
@@ -22,9 +23,8 @@ public sealed class ModNavigationRequestedEventArgs : EventArgs
 
 public partial class ForgeViewView : UserControl
 {
-    private readonly List<string> _selectionHistory = new();
-    private int _selectionHistoryIndex = -1;
-    private bool _navigatingHistory;
+    private static readonly IForgeGraphQueryService QueryService = new ForgeGraphQueryService();
+    private readonly ForgeGraphSelectionState _selectionState = new();
     private MainWindow? _subscribedWindow;
     private string? _loadedLayoutWorkspace;
     private readonly DispatcherTimer _layoutSaveTimer;
@@ -86,6 +86,7 @@ public partial class ForgeViewView : UserControl
         GraphCanvas.IsolateFocusedPath = !GraphCanvas.IsolateFocusedPath;
         IsolatePathButton.Content = GraphCanvas.IsolateFocusedPath ? "Isolate Path: On" : "Isolate Path: Off";
         IsolatePathButton.Tag = GraphCanvas.IsolateFocusedPath ? "Active" : null;
+        RebuildOutline();
         RequestLayoutSave();
     }
 
@@ -94,6 +95,7 @@ public partial class ForgeViewView : UserControl
         if (GraphCanvas is null || HealthFilterCombo is null || RelationshipFilterCombo is null) return;
         GraphCanvas.HealthFilter = SelectedTag(HealthFilterCombo, "All");
         GraphCanvas.RelationshipFilter = SelectedTag(RelationshipFilterCombo, "All");
+        RebuildOutline();
         RequestLayoutSave();
     }
 
@@ -209,10 +211,14 @@ public partial class ForgeViewView : UserControl
 
     private void Window_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainWindow.SelectedProfile)) LoadProfileLayout(force: false);
+        if (e.PropertyName == nameof(MainWindow.SelectedProfile)) { LoadProfileLayout(force: false); RebuildOutline(); }
+        if (e.PropertyName == nameof(MainWindow.ShowFullLibrary)) RebuildOutline();
         if (e.PropertyName is nameof(MainWindow.SearchText) or nameof(MainWindow.SearchMatchedPackageIds)) RebuildOutline();
         if (e.PropertyName == nameof(MainWindow.SelectedMod) && DataContext is MainWindow window)
+        {
             PinNodeButton.Content = GraphCanvas.PinnedPackageIds.Contains(window.SelectedMod?.PackageId ?? string.Empty, StringComparer.OrdinalIgnoreCase) ? "Unpin Node" : "Pin Node";
+            SynchronizeSelection(window.SelectedMod?.PackageId, ForgeGraphQueryOrigin.Inspector);
+        }
     }
 
     private void LoadProfileLayout(bool force)
@@ -225,6 +231,8 @@ public partial class ForgeViewView : UserControl
         if (!File.Exists(path))
         {
             GraphCanvas.ResetCustomLayout();
+            _selectionState.Restore(null, -1, window.SelectedMod?.PackageId, window.SelectedMod?.PackageId);
+            UpdateSelectionHistoryButtons();
             return;
         }
         try
@@ -239,6 +247,11 @@ public partial class ForgeViewView : UserControl
             GraphCanvas.IsolateFocusedPath = state?.IsolateFocusedPath ?? false;
             IsolatePathButton.Content = GraphCanvas.IsolateFocusedPath ? "Isolate Path: On" : "Isolate Path: Off";
             IsolatePathButton.Tag = GraphCanvas.IsolateFocusedPath ? "Active" : null;
+            _selectionState.Restore(state?.SelectionHistory, state?.SelectionHistoryIndex ?? -1, state?.SelectedPackageId ?? window.SelectedMod?.PackageId, state?.FocusedPackageId);
+            UpdateSelectionHistoryButtons();
+            if (!string.IsNullOrWhiteSpace(state?.SelectedPackageId) &&
+                !string.Equals(state.SelectedPackageId, window.SelectedMod?.PackageId, StringComparison.OrdinalIgnoreCase))
+                Dispatcher.BeginInvoke(() => ModNavigationRequested?.Invoke(this, new ModNavigationRequestedEventArgs(state.SelectedPackageId)));
         }
         catch
         {
@@ -261,7 +274,11 @@ public partial class ForgeViewView : UserControl
                 GraphCanvas.Pan.Y,
                 GraphCanvas.HealthFilter,
                 GraphCanvas.RelationshipFilter,
-                GraphCanvas.IsolateFocusedPath);
+                GraphCanvas.IsolateFocusedPath,
+                _selectionState.Current.History,
+                _selectionState.Current.HistoryIndex,
+                _selectionState.Current.FocusedPackageId,
+                _selectionState.Current.SelectedPackageId);
             var temporaryPath = path + ".tmp";
             File.WriteAllText(temporaryPath, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
             File.Move(temporaryPath, path, true);
@@ -281,76 +298,78 @@ public partial class ForgeViewView : UserControl
         double PanY,
         string HealthFilter = "All",
         string RelationshipFilter = "All",
-        bool IsolateFocusedPath = false);
+        bool IsolateFocusedPath = false,
+        IReadOnlyList<string>? SelectionHistory = null,
+        int SelectionHistoryIndex = -1,
+        string? FocusedPackageId = null,
+        string? SelectedPackageId = null);
 
     private void PreviousSelection_Click(object sender, RoutedEventArgs e) => NavigateSelectionHistory(-1);
     private void NextSelection_Click(object sender, RoutedEventArgs e) => NavigateSelectionHistory(1);
 
     private void RecordSelection(string packageId)
     {
-        if (_navigatingHistory || string.IsNullOrWhiteSpace(packageId)) return;
-        if (_selectionHistoryIndex >= 0 && string.Equals(_selectionHistory[_selectionHistoryIndex], packageId, StringComparison.OrdinalIgnoreCase)) return;
-        if (_selectionHistoryIndex < _selectionHistory.Count - 1)
-            _selectionHistory.RemoveRange(_selectionHistoryIndex + 1, _selectionHistory.Count - _selectionHistoryIndex - 1);
-        _selectionHistory.Add(packageId);
-        _selectionHistoryIndex = _selectionHistory.Count - 1;
+        if (string.IsNullOrWhiteSpace(packageId)) return;
+        _selectionState.Select(packageId, ForgeGraphQueryOrigin.Canvas);
         UpdateSelectionHistoryButtons();
+        RequestLayoutSave();
     }
 
     private void NavigateSelectionHistory(int offset)
     {
-        var next = _selectionHistoryIndex + offset;
-        if (next < 0 || next >= _selectionHistory.Count) return;
-        _selectionHistoryIndex = next;
-        var packageId = _selectionHistory[next];
-        _navigatingHistory = true;
-        try
-        {
-            ModNavigationRequested?.Invoke(this, new ModNavigationRequestedEventArgs(packageId));
-            GraphCanvas.CenterOnPackage(packageId);
-        }
-        finally
-        {
-            _navigatingHistory = false;
-            UpdateSelectionHistoryButtons();
-        }
+        var before = _selectionState.Current.HistoryIndex;
+        var selection = _selectionState.Navigate(offset);
+        if (selection.HistoryIndex == before || string.IsNullOrWhiteSpace(selection.SelectedPackageId)) return;
+        ModNavigationRequested?.Invoke(this, new ModNavigationRequestedEventArgs(selection.SelectedPackageId));
+        GraphCanvas.CenterOnPackage(selection.FocusedPackageId);
+        UpdateSelectionHistoryButtons();
+        RequestLayoutSave();
     }
 
     private void UpdateSelectionHistoryButtons()
     {
-        PreviousSelectionButton.IsEnabled = _selectionHistoryIndex > 0;
-        NextSelectionButton.IsEnabled = _selectionHistoryIndex >= 0 && _selectionHistoryIndex < _selectionHistory.Count - 1;
+        PreviousSelectionButton.IsEnabled = _selectionState.Current.HistoryIndex > 0;
+        NextSelectionButton.IsEnabled = _selectionState.Current.HistoryIndex >= 0 && _selectionState.Current.HistoryIndex < _selectionState.Current.History.Count - 1;
+    }
+
+    public void SynchronizeSelection(string? packageId, ForgeGraphQueryOrigin origin)
+    {
+        if (string.IsNullOrWhiteSpace(packageId)) return;
+        _selectionState.Select(packageId, origin);
+        UpdateSelectionHistoryButtons();
+        RequestLayoutSave();
+    }
+
+    private ForgeGraphQuery BuildCurrentQuery(MainWindow window)
+    {
+        ModHealthStatus? health = Enum.TryParse<ModHealthStatus>(SelectedTag(HealthFilterCombo, "All"), true, out var parsedHealth) ? parsedHealth : null;
+        IReadOnlyCollection<DependencyRelationshipType> relationships = SelectedTag(RelationshipFilterCombo, "All") switch
+        {
+            "Required" => [DependencyRelationshipType.Required, DependencyRelationshipType.PatchTarget],
+            "Optional" => [DependencyRelationshipType.Optional],
+            "Ordering" => [DependencyRelationshipType.LoadBefore, DependencyRelationshipType.LoadAfter],
+            "Conflicts" => [DependencyRelationshipType.Incompatible],
+            _ => Array.Empty<DependencyRelationshipType>()
+        };
+        return new ForgeGraphQuery(
+            window.SearchMatchedPackageIds,
+            window.IsSearchActive,
+            window.SelectedProfile?.ActiveMods,
+            window.ShowFullLibrary,
+            health,
+            relationships,
+            window.SelectedMod?.PackageId,
+            GraphCanvas.IsolateFocusedPath);
     }
 
     private void RebuildOutline()
     {
         if (DataContext is not MainWindow window) return;
-        var nodes = new Dictionary<string, DependencyGraphNode>(StringComparer.OrdinalIgnoreCase);
-        foreach (var node in window.DependencyNodes)
-        {
-            var key = !string.IsNullOrWhiteSpace(node.PackageId) ? node.PackageId.Trim() : node.Id?.Trim();
-            if (string.IsNullOrWhiteSpace(key) || nodes.ContainsKey(key)) continue;
-            nodes.Add(key, node);
-        }
-
-        var edges = window.DependencyEdges
-            .Where(edge => !string.IsNullOrWhiteSpace(edge.SourceId) && !string.IsNullOrWhiteSpace(edge.TargetId))
-            .Where(edge => nodes.ContainsKey(edge.SourceId) && nodes.ContainsKey(edge.TargetId))
-            .ToList();
-        var active = window.SelectedProfile?.ActiveMods.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (!window.ShowFullLibrary && active is { Count: > 0 })
-        {
-            nodes = nodes.Where(pair => active.Contains(pair.Key)).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
-            edges = edges.Where(edge => nodes.ContainsKey(edge.SourceId) && nodes.ContainsKey(edge.TargetId)).ToList();
-        }
-
-        if (window.IsSearchActive)
-        {
-            var matches = window.SearchMatchedPackageIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-            nodes = nodes.Where(pair => matches.Contains(pair.Key))
-                .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
-            edges = edges.Where(edge => nodes.ContainsKey(edge.SourceId) && nodes.ContainsKey(edge.TargetId)).ToList();
-        }
+        var result = QueryService.Execute(
+            new DependencyGraphModel(window.DependencyNodes.ToArray(), window.DependencyEdges.Where(ForgeGraphPresentationPolicy.ShouldDisplayEdge).ToArray()),
+            BuildCurrentQuery(window));
+        var nodes = result.Nodes.ToDictionary(node => node.PackageId ?? node.Id, StringComparer.OrdinalIgnoreCase);
+        var edges = result.Edges.ToList();
 
         var roots = nodes.Keys.Where(id => !edges.Any(edge => string.Equals(edge.SourceId, id, StringComparison.OrdinalIgnoreCase))).OrderBy(id => nodes[id].Name).ToList();
         if (roots.Count == 0) roots = nodes.Keys.OrderBy(id => nodes[id].Name).Take(1).ToList();
@@ -419,7 +438,13 @@ public partial class ForgeViewView : UserControl
             Padding = new Thickness(8, 5, 8, 5)
         };
         button.SetResourceReference(StyleProperty, "SecondaryButton");
-        button.Click += (_, _) => ModNavigationRequested?.Invoke(this, new ModNavigationRequestedEventArgs(id));
+        button.Click += (_, _) =>
+        {
+            _selectionState.Select(id, ForgeGraphQueryOrigin.Outline);
+            UpdateSelectionHistoryButtons();
+            RequestLayoutSave();
+            ModNavigationRequested?.Invoke(this, new ModNavigationRequestedEventArgs(id));
+        };
         output.Add(button);
 
         if (repeated || depth > 20) return;
@@ -439,15 +464,23 @@ public partial class ForgeViewView : UserControl
         var edges = window.DependencyEdges.ToList();
         if (Path.GetExtension(dialog.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase))
         {
-            var csv = new StringBuilder("Source,Target,Relationship,Description\r\n");
-            foreach (var edge in edges) csv.AppendLine($"\"{Escape(edge.SourceId)}\",\"{Escape(edge.TargetId)}\",\"{edge.Relationship}\",\"{Escape(edge.Description)}\"");
+            var csv = new StringBuilder("Source,Target,Relationship,Description,ProvenanceKind,ProvenanceSource,EvidenceIds\r\n");
+            foreach (var edge in edges)
+            {
+                var provenance = edge.Provenance ?? ForgeGraphRelationshipProvenance.FromDeclaration(edge);
+                csv.AppendLine($"\"{Escape(edge.SourceId)}\",\"{Escape(edge.TargetId)}\",\"{edge.Relationship}\",\"{Escape(edge.Description)}\",\"{Escape(provenance.SourceKind)}\",\"{Escape(provenance.SourceId)}\",\"{Escape(string.Join(";", provenance.EvidenceIds))}\"");
+            }
             File.WriteAllText(dialog.FileName, csv.ToString(), Encoding.UTF8);
         }
         else
         {
             var dot = new StringBuilder("digraph RimForge {\r\n  rankdir=LR;\r\n  node [shape=box, style=rounded];\r\n");
             foreach (var node in window.DependencyNodes) dot.AppendLine($"  \"{Escape(node.PackageId ?? node.Id)}\" [label=\"{Escape(node.Name)}\"];");
-            foreach (var edge in edges) dot.AppendLine($"  \"{Escape(edge.SourceId)}\" -> \"{Escape(edge.TargetId)}\" [label=\"{edge.Relationship}\"];");
+            foreach (var edge in edges)
+            {
+                var provenance = edge.Provenance ?? ForgeGraphRelationshipProvenance.FromDeclaration(edge);
+                dot.AppendLine($"  \"{Escape(edge.SourceId)}\" -> \"{Escape(edge.TargetId)}\" [label=\"{edge.Relationship}\", tooltip=\"{Escape(provenance.SourceKind)}: {Escape(provenance.SourceId)}\"];");
+            }
             dot.AppendLine("}"); File.WriteAllText(dialog.FileName, dot.ToString(), Encoding.UTF8);
         }
     }

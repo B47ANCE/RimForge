@@ -113,6 +113,8 @@
               <TextBlock Text="{Binding ForgeFocusDisplayName}" FontSize="19" FontWeight="SemiBold" Margin="0,8,0,3" TextWrapping="Wrap"/>
               <TextBlock Text="{Binding ForgeFocusPackageId}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap"/>
               <TextBlock Text="{Binding ForgeFocusSummary}" Margin="0,10,0,0" TextWrapping="Wrap"/>
+              <TextBlock Text="RELATIONSHIP PROVENANCE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextMutedBrush}" Margin="0,12,0,4"/>
+              <TextBlock Text="{Binding ForgeFocusedProvenanceSummary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap"/>
               <TextBlock Text="{Binding SelectionBreadcrumb}" Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" Margin="0,10,0,0"/>
               <TextBlock Text="{Binding ForgeInteractionStatus}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,8,0,0"/>
               <TextBlock Text="{Binding ForgeHoverSummary}" Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" Margin="0,5,0,0"/>

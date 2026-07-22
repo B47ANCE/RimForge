@@ -1,4 +1,13 @@
-# Unreleased — Companion Gate 2 Runtime Integration
+# Unreleased — Epic D Pass 2 Canonical Graph Query and Selection
+
+- Added a Core-owned Forge graph query/result contract shared by the canvas and outline, with explicit search, profile, health, relationship, and focused-path criteria.
+- Added deterministic Core selection state with navigation origins, focus, branch-safe history, and profile-owned persistence.
+- Guaranteed provenance on every queried and projected relationship, surfaced it in ForgeView selection context, and included it in DOT/CSV exports.
+- Routed search and Issue Viewer navigation through canonical Forge selection origins.
+- Added behavioral and architecture regression coverage for filtering, empty search results, provenance, history branching, and state restoration.
+- Advanced the Client version to `2.2.0-alpha.71`.
+
+# 2.2.0-alpha.70 — Companion Gate 2 Runtime Integration
 
 ## Fixed
 

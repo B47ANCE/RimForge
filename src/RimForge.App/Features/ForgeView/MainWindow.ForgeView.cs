@@ -41,6 +41,25 @@ public partial class MainWindow
             1 => "1 incoming or outgoing relationship is focused.",
             var count => $"{count} incoming and outgoing relationships are focused."
         };
+    public string ForgeFocusedProvenanceSummary
+    {
+        get
+        {
+            var packageId = SelectedMod?.PackageId;
+            if (string.IsNullOrWhiteSpace(packageId)) return "Select a mod to inspect relationship provenance.";
+            var provenance = DependencyEdges
+                .Where(ForgeGraphPresentationPolicy.ShouldDisplayEdge)
+                .Where(edge => string.Equals(edge.SourceId, packageId, StringComparison.OrdinalIgnoreCase) || string.Equals(edge.TargetId, packageId, StringComparison.OrdinalIgnoreCase))
+                .Select(edge => edge.Provenance ?? ForgeGraphRelationshipProvenance.FromDeclaration(edge))
+                .DistinctBy(item => $"{item.SourceKind}|{item.SourceId}|{item.Summary}", StringComparer.OrdinalIgnoreCase)
+                .OrderBy(item => item.SourceKind, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(item => item.SourceId, StringComparer.OrdinalIgnoreCase)
+                .Take(4)
+                .Select(item => $"{item.SourceKind}: {item.SourceId} — {item.Summary}")
+                .ToArray();
+            return provenance.Length == 0 ? "No rendered relationships are focused." : string.Join(Environment.NewLine, provenance);
+        }
+    }
 
     public int ForgeFocusedDependencyCount => GetFocusedEdges(DependencyRelationshipType.Required, outgoing: true);
     public int ForgeFocusedDependentCount => GetFocusedEdges(DependencyRelationshipType.Required, outgoing: false);
@@ -114,6 +133,7 @@ public partial class MainWindow
         Notify(nameof(ForgeFocusDisplayName));
         Notify(nameof(ForgeFocusPackageId));
         Notify(nameof(ForgeFocusSummary));
+        Notify(nameof(ForgeFocusedProvenanceSummary));
         Notify(nameof(ForgeFocusedDependencyCount));
         Notify(nameof(ForgeFocusedDependentCount));
         Notify(nameof(ForgeFocusedConflictCount));

@@ -75,6 +75,9 @@ public sealed class ForgeGraphProjectionService : IForgeGraphProjectionService
             .OrderBy(edge => edge.SourceId, StringComparer.OrdinalIgnoreCase)
             .ThenBy(edge => edge.TargetId, StringComparer.OrdinalIgnoreCase)
             .ThenBy(edge => edge.Relationship)
+            .Select(edge => edge.Provenance is null
+                ? edge with { Provenance = ForgeGraphRelationshipProvenance.FromDeclaration(edge) }
+                : edge)
             .ToArray();
         var graph = new DependencyGraphModel(orderedNodes, orderedEdges);
         var intelligence = BuildIntelligence(graph, evidence);
@@ -119,7 +122,12 @@ public sealed class ForgeGraphProjectionService : IForgeGraphProjectionService
                 isConflict ? DependencyRelationshipType.Incompatible : DependencyRelationshipType.PatchTarget,
                 $"Forge Evidence: {evidence.Summary}",
                 Math.Max(1, evidence.ObservationCount),
-                [evidence.Provenance.SourceId]);
+                [evidence.Provenance.SourceId],
+                new ForgeGraphRelationshipProvenance(
+                    evidence.Provenance.SourceKind.ToString(),
+                    evidence.Provenance.SourceId,
+                    [evidence.EvidenceId],
+                    evidence.Summary));
         }
     }
 

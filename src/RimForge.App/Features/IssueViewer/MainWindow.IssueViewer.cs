@@ -153,6 +153,7 @@ public partial class MainWindow
     private void IssueViewer_ModNavigationRequested(object? sender, IssueModNavigationRequestedEventArgs e)
     {
         SelectModByPackageId(e.PackageId);
+        ForgeViewFeature.SynchronizeSelection(e.PackageId, ForgeGraphQueryOrigin.IssueNavigation);
         if (e.OpenForgeView)
             ScrollToWorkspaceSection(ForgeViewPanel, "ForgeView");
     }

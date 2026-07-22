@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using RimForge.Core.Models;
+using RimForge.Core.Services;
 
 namespace RimForge.App.Features.ForgeView;
 
@@ -63,6 +64,7 @@ public sealed class ForgeGraphRenderCompletedEventArgs : EventArgs
 
 public sealed class ForgeGraphCanvas : FrameworkElement
 {
+    private static readonly IForgeGraphQueryService QueryService = new ForgeGraphQueryService();
     private const double NodeWidth = 190;
     private const double NodeHeight = 58;
     private const double HorizontalGap = 72;
@@ -363,62 +365,30 @@ public sealed class ForgeGraphCanvas : FrameworkElement
 
     private (List<DependencyGraphNode> Nodes, List<DependencyGraphEdge> Edges) GetVisibleTopology()
     {
-        var nodes = Enumerate<DependencyGraphNode>(Nodes).ToList();
-        var edges = Enumerate<DependencyGraphEdge>(Edges).ToList();
-
-        if (!ShowFullLibrary)
+        var profileIds = Enumerate<object>(ProfilePackageIds).Select(value => value?.ToString()).Where(value => !string.IsNullOrWhiteSpace(value)).Cast<string>().ToArray();
+        var searchIds = Enumerate<object>(SearchMatchPackageIds).Select(value => value?.ToString()).Where(value => !string.IsNullOrWhiteSpace(value)).Cast<string>().ToArray();
+        ModHealthStatus? health = Enum.TryParse<ModHealthStatus>(HealthFilter, true, out var parsedHealth) ? parsedHealth : null;
+        IReadOnlyCollection<DependencyRelationshipType> relationships = RelationshipFilter switch
         {
-            var active = Enumerate<object>(ProfilePackageIds).Select(value => value?.ToString()).Where(value => !string.IsNullOrWhiteSpace(value)).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            // An unavailable profile must not make a successfully discovered graph appear empty.
-            if (active.Count > 0)
-                nodes = nodes.Where(node => active.Contains(node.PackageId ?? node.Id)).ToList();
-        }
-
-        if (!string.IsNullOrWhiteSpace(SearchText))
-        {
-            var searchMatches = Enumerate<object>(SearchMatchPackageIds)
-                .Select(value => value?.ToString())
-                .Where(value => !string.IsNullOrWhiteSpace(value))
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            nodes = nodes.Where(node => searchMatches.Contains(node.PackageId ?? node.Id)).ToList();
-        }
-
-        nodes = ApplyHealthFilter(nodes);
-        var ids = nodes.Select(node => node.PackageId ?? node.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        edges = edges
-            .Where(edge => ids.Contains(edge.SourceId) && ids.Contains(edge.TargetId))
-            .Where(ForgeGraphPresentationPolicy.ShouldDisplayEdge)
-            .Where(MatchesRelationshipFilter)
-            .ToList();
-
-        if (IsolateFocusedPath && !string.IsNullOrWhiteSpace(SelectedPackageId) && ids.Contains(SelectedPackageId))
-        {
-            var pathIds = BuildFocusedNodeSet(edges);
-            nodes = nodes.Where(node => pathIds.Contains(node.PackageId ?? node.Id)).ToList();
-            ids = nodes.Select(node => node.PackageId ?? node.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            edges = edges.Where(edge => ids.Contains(edge.SourceId) && ids.Contains(edge.TargetId)).ToList();
-        }
-
-        return (nodes, edges);
-    }
-
-    private List<DependencyGraphNode> ApplyHealthFilter(List<DependencyGraphNode> nodes)
-    {
-        if (string.IsNullOrWhiteSpace(HealthFilter) || HealthFilter.Equals("All", StringComparison.OrdinalIgnoreCase)) return nodes;
-        return nodes.Where(node => node.Status.ToString().Equals(HealthFilter, StringComparison.OrdinalIgnoreCase)).ToList();
-    }
-
-    private bool MatchesRelationshipFilter(DependencyGraphEdge edge)
-    {
-        if (string.IsNullOrWhiteSpace(RelationshipFilter) || RelationshipFilter.Equals("All", StringComparison.OrdinalIgnoreCase)) return true;
-        return RelationshipFilter switch
-        {
-            "Required" => edge.Relationship is DependencyRelationshipType.Required or DependencyRelationshipType.PatchTarget,
-            "Optional" => edge.Relationship == DependencyRelationshipType.Optional,
-            "Ordering" => edge.Relationship is DependencyRelationshipType.LoadBefore or DependencyRelationshipType.LoadAfter,
-            "Conflicts" => edge.Relationship == DependencyRelationshipType.Incompatible,
-            _ => true
+            "Required" => [DependencyRelationshipType.Required, DependencyRelationshipType.PatchTarget],
+            "Optional" => [DependencyRelationshipType.Optional],
+            "Ordering" => [DependencyRelationshipType.LoadBefore, DependencyRelationshipType.LoadAfter],
+            "Conflicts" => [DependencyRelationshipType.Incompatible],
+            _ => Array.Empty<DependencyRelationshipType>()
         };
+        var graph = new DependencyGraphModel(
+            Enumerate<DependencyGraphNode>(Nodes).ToArray(),
+            Enumerate<DependencyGraphEdge>(Edges).Where(ForgeGraphPresentationPolicy.ShouldDisplayEdge).ToArray());
+        var result = QueryService.Execute(graph, new ForgeGraphQuery(
+            searchIds,
+            !string.IsNullOrWhiteSpace(SearchText),
+            profileIds,
+            ShowFullLibrary,
+            health,
+            relationships,
+            SelectedPackageId,
+            IsolateFocusedPath));
+        return (result.Nodes.ToList(), result.Edges.ToList());
     }
 
     private void EnsureLayout()

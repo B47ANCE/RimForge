@@ -196,9 +196,9 @@ Work follows the product dependency chain: runtime evidence → analysis → pro
 
 ### Pass 2: canonical graph query and selection
 
-- [ ] one query/filter contract shared by canvas, outline, search, and issue navigation
-- [ ] deterministic selection, focus, history, and profile-owned layout state
-- [ ] evidence provenance available from every rendered relationship
+- [x] one query/filter contract shared by canvas, outline, search, and issue navigation
+- [x] deterministic selection, focus, history, and profile-owned layout state
+- [x] evidence provenance available from every rendered relationship
 
 ### Pass 3: scalable graph rendering
 

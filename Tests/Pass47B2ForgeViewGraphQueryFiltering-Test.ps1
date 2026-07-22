@@ -3,20 +3,25 @@ $root = Split-Path -Parent $PSScriptRoot
 $canvasPath = Join-Path $root 'src/RimForge.App/Features/ForgeView/ForgeGraphCanvas.cs'
 $viewPath = Join-Path $root 'src/RimForge.App/Features/ForgeView/ForgeViewView.xaml'
 $codePath = Join-Path $root 'src/RimForge.App/Features/ForgeView/ForgeViewView.xaml.cs'
+$queryPath = Join-Path $root 'src/RimForge.Core/Services/ForgeGraphQueryService.cs'
 $canvas = Get-Content -Raw $canvasPath
 $view = Get-Content -Raw $viewPath
 $code = Get-Content -Raw $codePath
+$query = Get-Content -Raw $queryPath
 
 $canvasTokens = @(
     'HealthFilterProperty',
     'RelationshipFilterProperty',
     'IsolateFocusedPathProperty',
-    'ApplyHealthFilter',
-    'MatchesRelationshipFilter',
-    'BuildFocusedNodeSet(edges)'
+    'QueryService.Execute',
+    'new ForgeGraphQuery('
 )
 foreach ($token in $canvasTokens) {
     if (-not $canvas.Contains($token)) { throw "ForgeGraphCanvas is missing $token. Inspected: $canvasPath" }
+}
+
+foreach ($token in @('query.SearchActive', 'query.ShowFullLibrary', 'query.Health', 'query.EffectiveRelationships', 'query.IsolateFocusedPath', 'Reachable(')) {
+    if (-not $query.Contains($token)) { throw "Canonical Forge graph query is missing $token. Inspected: $queryPath" }
 }
 
 $viewTokens = @(

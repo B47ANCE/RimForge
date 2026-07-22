@@ -21,7 +21,8 @@ public sealed record DependencyGraphEdge(
     DependencyRelationshipType Relationship,
     string Description,
     int DeclarationCount = 1,
-    IReadOnlyList<string>? DeclarationSources = null);
+    IReadOnlyList<string>? DeclarationSources = null,
+    ForgeGraphRelationshipProvenance? Provenance = null);
 
 public sealed record DependencyGraphModel(
     IReadOnlyList<DependencyGraphNode> Nodes,
