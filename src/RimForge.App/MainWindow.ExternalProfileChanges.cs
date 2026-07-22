@@ -32,6 +32,7 @@ public partial class MainWindow
                 NotificationSeverity.Warning,
                 [new NotificationAction("accept-external-profile", "Use External"),
                  new NotificationAction("restore-rimforge-profile", "Restore RimForge"),
+                 new NotificationAction("defer-external-profile", "Decide Later"),
                  new NotificationAction("view-activity", "View Details")],
                 Duration: TimeSpan.FromSeconds(20)));
         }
@@ -45,10 +46,10 @@ public partial class MainWindow
     {
         var pending = _pendingExternalProfileReconciliation;
         if (pending is null) return;
-        var result = await _profileWorkspaceService.SaveLoadOrderAsync(pending.Profile, pending.External.ActiveMods);
+        var result = await _externalProfileConflictService.ResolveAsync(pending, ExternalProfileResolution.AdoptExternal);
         if (result.Success)
         {
-            await _modsConfigChangeMonitor.AcknowledgeCurrentAsync();
+            if (result.RequiresAcknowledgement) await _modsConfigChangeMonitor.AcknowledgeCurrentAsync();
             await LoadProfilesAsync();
             _pendingExternalProfileReconciliation = null;
         }
@@ -60,13 +61,26 @@ public partial class MainWindow
     {
         var pending = _pendingExternalProfileReconciliation;
         if (pending is null) return;
-        var result = await _profileWorkspaceService.ActivateAsync(pending.Profile);
+        var result = await _externalProfileConflictService.ResolveAsync(pending, ExternalProfileResolution.RestoreRimForge);
         if (result.Success)
         {
-            await _modsConfigChangeMonitor.AcknowledgeCurrentAsync();
+            if (result.RequiresAcknowledgement) await _modsConfigChangeMonitor.AcknowledgeCurrentAsync();
             _pendingExternalProfileReconciliation = null;
         }
         _notificationService.Enqueue(new NotificationRequest("RimForge profile restore", result.Message,
             result.Success ? NotificationSeverity.Success : NotificationSeverity.Error));
+    }
+
+    private async Task DeferExternalProfileAsync()
+    {
+        var pending = _pendingExternalProfileReconciliation;
+        if (pending is null) return;
+        var result = await _externalProfileConflictService.ResolveAsync(pending, ExternalProfileResolution.Defer);
+        _pendingExternalProfileReconciliation = null;
+        Append(result.Message, ActivitySeverity.Info);
+        _notificationService.Enqueue(new NotificationRequest(
+            "External profile reconciliation deferred",
+            result.Message,
+            NotificationSeverity.Information));
     }
 }

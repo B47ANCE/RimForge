@@ -924,6 +924,18 @@ Require(!invalidDraft.CanCommit && invalidDraft.ValidationErrors.Any(error => er
         invalidDraft.ValidationErrors.Any(error => error.Contains("more than once", StringComparison.Ordinal)),
     "Profile edit validation did not reject missing Core and duplicate entries.");
 
+var externalSnapshot = new ExternalProfileSnapshot(
+    "ModsConfig.xml", "1.6", ["ludeon.rimworld", "example.analysis.beta"], Array.Empty<string>(), DateTimeOffset.UtcNow);
+var externalComparison = new ExternalProfileReconciliationService().Compare(editableProfile, externalSnapshot);
+var externalConflictService = new ExternalProfileConflictService(null!);
+var deferredExternal = await externalConflictService.ResolveAsync(externalComparison, ExternalProfileResolution.Defer);
+Require(deferredExternal.Success && !deferredExternal.RequiresAcknowledgement && deferredExternal.UpdatedProfile is null,
+    "Deferred external reconciliation was not a no-write outcome.");
+var lockedExternal = externalComparison with { Profile = editableProfile with { IsLocked = true } };
+var rejectedExternal = await externalConflictService.ResolveAsync(lockedExternal, ExternalProfileResolution.AdoptExternal);
+Require(!rejectedExternal.Success && rejectedExternal.Message.Contains("locked", StringComparison.OrdinalIgnoreCase),
+    "Locked profile accepted external changes.");
+
 Console.WriteLine("RimForge.ExecutionTests: PASSED");
 return;
 

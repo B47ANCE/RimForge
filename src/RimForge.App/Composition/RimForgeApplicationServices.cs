@@ -39,6 +39,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
         IProfileWorkspaceService profileWorkspaceService,
         IProfileEditService profileEditService,
         IExternalProfileReconciliationService externalProfileReconciliationService,
+        IExternalProfileConflictService externalProfileConflictService,
         IModsConfigChangeMonitor modsConfigChangeMonitor,
         ISelectionService selectionService,
         IProfileWorkspaceStateService workspaceStateService,
@@ -85,6 +86,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
         ProfileWorkspaceService = profileWorkspaceService;
         ProfileEditService = profileEditService;
         ExternalProfileReconciliationService = externalProfileReconciliationService;
+        ExternalProfileConflictService = externalProfileConflictService;
         ModsConfigChangeMonitor = modsConfigChangeMonitor;
         SelectionService = selectionService;
         WorkspaceStateService = workspaceStateService;
@@ -132,6 +134,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
     public IProfileWorkspaceService ProfileWorkspaceService { get; }
     public IProfileEditService ProfileEditService { get; }
     public IExternalProfileReconciliationService ExternalProfileReconciliationService { get; }
+    public IExternalProfileConflictService ExternalProfileConflictService { get; }
     public IModsConfigChangeMonitor ModsConfigChangeMonitor { get; }
     public ISelectionService SelectionService { get; }
     public IProfileWorkspaceStateService WorkspaceStateService { get; }
@@ -232,6 +235,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
             profileWorkspaceService,
             new ProfileEditService(profileWorkspaceService),
             new ExternalProfileReconciliationService(),
+            new ExternalProfileConflictService(profileWorkspaceService),
             new ModsConfigChangeMonitor(),
             new SelectionService(eventBus),
             new ProfileWorkspaceStateService(eventBus),

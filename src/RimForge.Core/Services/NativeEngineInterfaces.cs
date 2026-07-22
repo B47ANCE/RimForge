@@ -187,6 +187,14 @@ public interface IExternalProfileReconciliationService
     ExternalProfileReconciliation Compare(RimForgeProfile profile, ExternalProfileSnapshot external);
 }
 
+public interface IExternalProfileConflictService
+{
+    Task<ExternalProfileResolutionResult> ResolveAsync(
+        ExternalProfileReconciliation reconciliation,
+        ExternalProfileResolution resolution,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IModsConfigChangeMonitor : IAsyncDisposable
 {
     event EventHandler<ExternalProfileChange>? Changed;

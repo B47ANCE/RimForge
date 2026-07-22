@@ -19,3 +19,18 @@ public sealed record ExternalProfileReconciliation(
         ? "The active RimWorld configuration matches the selected RimForge profile."
         : $"{AddedPackageIds.Count} added, {RemovedPackageIds.Count} removed, {OrderChanges.Count} reordered.";
 }
+
+public enum ExternalProfileResolution
+{
+    AdoptExternal,
+    RestoreRimForge,
+    Defer
+}
+
+public sealed record ExternalProfileResolutionResult(
+    bool Success,
+    ExternalProfileResolution Resolution,
+    string Message,
+    RimForgeProfile? UpdatedProfile = null,
+    string? RecoveryPath = null,
+    bool RequiresAcknowledgement = false);

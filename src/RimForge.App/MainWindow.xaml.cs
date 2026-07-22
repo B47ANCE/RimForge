@@ -58,6 +58,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly RepairPlanner _repairPlanner = new();
     private readonly IProfileWorkspaceService _profileWorkspaceService;
     private readonly IExternalProfileReconciliationService _externalProfileReconciliationService;
+    private readonly IExternalProfileConflictService _externalProfileConflictService;
     private readonly IModsConfigChangeMonitor _modsConfigChangeMonitor;
     private readonly IApplicationEventBus _eventBus;
     private readonly List<IDisposable> _eventSubscriptions = new();
@@ -1168,6 +1169,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _nativeForgeRunner = new NativeForgeRunner(_forgeDnaService);
         _profileWorkspaceService = services.ProfileWorkspaceService;
         _externalProfileReconciliationService = services.ExternalProfileReconciliationService;
+        _externalProfileConflictService = services.ExternalProfileConflictService;
         _modsConfigChangeMonitor = services.ModsConfigChangeMonitor;
         _eventBus = services.EventBus;
         _selectionService = services.SelectionService;
@@ -1511,6 +1513,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (applicationEvent.ActionId.Equals("restore-rimforge-profile", StringComparison.OrdinalIgnoreCase))
         {
             Dispatcher.Invoke(async () => await RestoreRimForgeProfileAsync());
+            return;
+        }
+
+        if (applicationEvent.ActionId.Equals("defer-external-profile", StringComparison.OrdinalIgnoreCase))
+        {
+            Dispatcher.Invoke(async () => await DeferExternalProfileAsync());
             return;
         }
 

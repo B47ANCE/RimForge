@@ -92,6 +92,15 @@ RimForge is currently implementing **Epic C — Library and Profiles**. Work bui
 - [x] stale-workspace detection before persistence
 - [x] canonical save path with existing backup and rollback behavior
 
+### Pass 3: external profile conflict resolution
+
+- [x] explicit adopt, restore, and defer resolution outcomes
+- [x] no-write defer behavior
+- [x] locked-profile protection for external adoption
+- [x] canonical backed-up save and activation recovery paths
+- [x] monitor acknowledgement only after successful file-changing resolutions
+- [x] main-client notification actions for every resolution choice
+
 ## Later epics
 
 - **Epic C:** Library and Profiles

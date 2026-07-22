@@ -1,4 +1,19 @@
-# Unreleased — Epic C Pass 2 Atomic Profile Editing
+# Unreleased — Epic C Pass 3 External Profile Conflict Resolution
+
+## Added
+
+- Added a canonical conflict-resolution service for externally changed `ModsConfig.xml` state.
+- Added explicit adopt-external, restore-RimForge, and defer-without-writing outcomes.
+- Added locked-profile protection and behavioral coverage for no-write resolution paths.
+- Added a Decide Later action to the main-client reconciliation notification.
+
+## Changed
+
+- Routed external adoption and restoration through a single typed result contract.
+- Limited monitor acknowledgement to successful file-changing resolutions.
+- Advanced the client version to `2.2.0-alpha.63`.
+
+# Previous Unreleased — Epic C Pass 2 Atomic Profile Editing
 
 ## Added
 
