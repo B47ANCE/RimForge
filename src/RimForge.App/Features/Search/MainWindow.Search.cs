@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.ObjectModel;
 using RimForge.App.Features.Search;
+using RimForge.App.Commands;
 using RimForge.Analysis.Models;
 using RimForge.Core.Models;
 using RimForge.UI.Presentation;
@@ -236,16 +237,16 @@ public partial class MainWindow
                 score + 60));
         }
 
-        foreach (var workspace in SearchableWorkspaces)
+        foreach (var action in ProductivityActionCatalog.All)
         {
-            var featureCandidates = new[] { workspace.Title }.Concat(workspace.Aliases);
+            var featureCandidates = new[] { action.Title }.Concat(action.Aliases);
             if (!MatchesSearchFeature(SearchText, featureCandidates)) continue;
             results.Add(new SearchDiscoveryResult(
-                SearchDiscoveryKind.Workspace,
-                workspace.Title,
-                $"RimForge feature · {workspace.Description}",
-                workspace.Destination,
-                workspace.Glyph,
+                action.Destination is null ? SearchDiscoveryKind.Command : SearchDiscoveryKind.Workspace,
+                action.Title,
+                action.Destination is null ? $"RimForge command · {action.Description}" : $"RimForge feature · {action.Description}",
+                action.Id,
+                action.Glyph,
                 1000 + ScoreSearchMatch(SearchText, featureCandidates.ToArray())));
         }
 
@@ -258,16 +259,6 @@ public partial class MainWindow
         SelectedSearchDiscoveryResult = SearchDiscoveryResults.FirstOrDefault();
         SelectUniqueModSearchResult();
     }
-
-    private static readonly (string Title, string Destination, string Glyph, string Description, string[] Aliases)[] SearchableWorkspaces =
-    [
-        ("Mod Sorter", "Mod Sorter", "\uE8CB", "Manage active and inactive mods", ["mods", "load order", "sorting", "dashboard"]),
-        ("Issue Viewer", "Issue Viewer", "\uE7BA", "Review health findings and repairs", ["issues", "diagnostics", "health", "anvil", "repairs"]),
-        ("ForgeView", "ForgeView", "\uE9D2", "Explore dependency and incompatibility relationships", ["graph", "dependencies", "relationships", "conflicts"]),
-        ("Texture Conversion Tools", "Texture Tools", "\uE790", "Analyze and convert textures to BC7 DDS", ["texture", "textures", "dds", "bc7", "converter"]),
-        ("Console", "Console", "\uE756", "Inspect RimForge activity and game logs", ["log", "logs", "activity", "player.log"]),
-        ("Settings", "Settings", "\uE713", "Configure profiles, paths, launch, and behavior", ["preferences", "profiles", "paths", "launch", "configuration"])
-    ];
 
     private static bool MatchesSearchFeature(string query, IEnumerable<string> candidates)
     {
@@ -333,11 +324,28 @@ public partial class MainWindow
                 break;
             }
             case SearchDiscoveryKind.Workspace:
-                NavigateToSearchWorkspace(result.TargetId);
+            case SearchDiscoveryKind.Command:
+                ExecuteProductivityAction(result.TargetId);
                 break;
         }
 
         RecordGlobalNavigationSnapshot();
+    }
+
+    private void ExecuteProductivityAction(string actionId)
+    {
+        var action = ProductivityActionCatalog.All.FirstOrDefault(candidate => candidate.Id == actionId);
+        if (action?.Destination is not null)
+        {
+            NavigateToSearchWorkspace(action.Destination);
+            return;
+        }
+
+        switch (actionId)
+        {
+            case "profile.enable-selected": ExecuteBulkEnableSelected(); break;
+            case "profile.disable-selected": ExecuteBulkDisableSelected(); break;
+        }
     }
 
     private void NavigateToSearchWorkspace(string destination)

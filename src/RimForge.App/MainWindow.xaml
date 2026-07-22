@@ -329,6 +329,8 @@
                                     InactiveDropRequested="ModSorter_InactiveDropRequested"
                                     SearchSteamLibrariesRequested="ModSorter_SearchSteamLibrariesRequested"
                                     OpenSettingsRequested="ModSorter_OpenSettingsRequested"
+                                    EnableSelectedRequested="ModSorter_EnableSelectedRequested"
+                                    DisableSelectedRequested="ModSorter_DisableSelectedRequested"
                                     HealthNavigationRequested="ModSorter_HealthNavigationRequested"/>
               <Border Grid.Row="2" Style="{StaticResource Card}" Visibility="Collapsed" Margin="0,0,0,12" Padding="18">
                 <Grid>

@@ -4,6 +4,8 @@ RimForge Client is the native Windows engineering platform for discovering, diag
 
 RimForge is in active alpha development. The canonical version is stored in [`VERSION`](VERSION) and applied to every project by [`Directory.Build.props`](Directory.Build.props).
 
+Global search also acts as a command palette backed by RimForge's canonical workspace/action catalog. In Mod Sorter, extended selections can be enabled or disabled as one previewed, undoable profile operation.
+
 ## Repository layout
 
 | Path | Responsibility |

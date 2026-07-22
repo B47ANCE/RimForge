@@ -6,7 +6,8 @@ public enum SearchDiscoveryKind
 {
     Mod,
     Issue,
-    Workspace
+    Workspace,
+    Command
 }
 
 public sealed record SearchDiscoveryResult(
@@ -23,5 +24,5 @@ public sealed record SearchDiscoveryResult(
 {
     public bool ShowModIdentity => Kind == SearchDiscoveryKind.Mod;
     public bool ShowKindGlyph => !ShowModIdentity;
-    public bool IsFeature => Kind == SearchDiscoveryKind.Workspace;
+    public bool IsFeature => Kind is SearchDiscoveryKind.Workspace or SearchDiscoveryKind.Command;
 }

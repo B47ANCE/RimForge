@@ -91,6 +91,86 @@ public partial class MainWindow
     private void ModSorter_OpenSettingsRequested(object sender, RoutedEventArgs e) =>
         Settings_Click(sender, e);
 
+    private void ModSorter_EnableSelectedRequested(object sender, RoutedEventArgs e) => ExecuteBulkEnableSelected();
+    private void ModSorter_DisableSelectedRequested(object sender, RoutedEventArgs e) => ExecuteBulkDisableSelected();
+
+    private void ExecuteBulkEnableSelected()
+    {
+        if (SelectedProfile is null) return;
+        var selected = ModSorterFeature.InactiveList.SelectedItems
+            .Cast<ProfileLoadOrderItemViewModel>()
+            .Where(InactiveInstalledMods.Contains)
+            .Distinct()
+            .ToArray();
+        if (selected.Length == 0)
+        {
+            Append("Select one or more inactive library mods before running bulk enable.", ActivitySeverity.Info);
+            return;
+        }
+        if (SelectedProfile.IsLocked && selected.Any(item => !item.IsOfficialDlc))
+        {
+            Append($"{SelectedProfile.Name} is locked. Only official DLC can be changed in this profile.", ActivitySeverity.Warning);
+            return;
+        }
+
+        var preview = BuildBulkOperationPreview("add", selected, "Dependency assistance may add required installed mods.");
+        if (!ForgeDialogService.ShowConfirmation(this, "Enable selected mods", preview, $"Enable {selected.Length}")) return;
+
+        var before = CaptureLoadOrderUndoSnapshot();
+        try
+        {
+            foreach (var item in selected)
+            {
+                InactiveInstalledMods.Remove(item);
+                item.IsEnabled = true;
+                ActiveProfileMods.Insert(GetOptimizedInsertionIndex(item), item);
+            }
+            var dependencies = ResolveDependencyAssistanceForGroup(selected).ToArray();
+            if (IsInstantAutoSortEnabled) ApplyOptimizedLoadOrder(false, registerUndo: false);
+            SyncCombinedLoadOrder();
+            RegisterLoadOrderUndo($"Enable {selected.Length} selected mods", before);
+            ModSorterFeature.SelectItems(ModSorterFeature.ActiveList, selected);
+            PublishDependencyAssistanceNotification(selected, dependencies);
+            Append($"Enabled {selected.Length} selected mod{(selected.Length == 1 ? string.Empty : "s")} in {SelectedProfile.Name}.", ActivitySeverity.Success);
+        }
+        catch (Exception ex)
+        {
+            RestoreLoadOrderUndoSnapshot(before);
+            Append($"Bulk enable failed and the previous load order was restored: {ex.Message}", ActivitySeverity.Error);
+        }
+    }
+
+    private void ExecuteBulkDisableSelected()
+    {
+        if (SelectedProfile is null) return;
+        var selected = ModSorterFeature.ActiveList.SelectedItems
+            .Cast<ProfileLoadOrderItemViewModel>()
+            .Where(item => ActiveProfileMods.Contains(item) && !item.IsMandatory)
+            .Distinct()
+            .ToArray();
+        if (selected.Length == 0)
+        {
+            Append("Select one or more non-mandatory active mods before running bulk disable.", ActivitySeverity.Info);
+            return;
+        }
+        if (SelectedProfile.IsLocked && selected.Any(item => !item.IsOfficialDlc))
+        {
+            Append($"{SelectedProfile.Name} is locked. Only official DLC can be changed in this profile.", ActivitySeverity.Warning);
+            return;
+        }
+
+        var preview = BuildBulkOperationPreview("remove", selected, "Required dependents and orphan cleanup remain governed by your current assistance preferences.");
+        if (!ForgeDialogService.ShowConfirmation(this, "Disable selected mods", preview, $"Disable {selected.Length}")) return;
+        DisableModGroup(selected, offerOrphanCleanup: true);
+    }
+
+    private string BuildBulkOperationPreview(string verb, IReadOnlyList<ProfileLoadOrderItemViewModel> items, string note)
+    {
+        var visible = items.Take(8).Select(item => $"• {item.DisplayName}");
+        var remaining = items.Count > 8 ? $"\n• …and {items.Count - 8} more" : string.Empty;
+        return $"Preview: {verb} {items.Count} mod{(items.Count == 1 ? string.Empty : "s")} {(verb == "add" ? "to" : "from")} {SelectedProfile?.Name}.\n\n{string.Join("\n", visible)}{remaining}\n\n{note}\n\nThe complete operation is recorded as one undo step.";
+    }
+
     private void ModSorter_HealthNavigationRequested(object? sender, ModHealthNavigationRequestedEventArgs e)
     {
         var item = e.Item;

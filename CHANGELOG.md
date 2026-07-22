@@ -1,4 +1,11 @@
-# Unreleased — Epic E Pass 3 Repair Engine Certification
+# Unreleased — Epic F Pass 1 Unified Productivity Workflows
+
+- Consolidated workspace navigation and discoverable commands into one typed productivity-action catalog projected by global search.
+- Added searchable bulk enable and disable commands plus direct Mod Sorter controls for extended selections.
+- Added exact-scope confirmation previews, locked/mandatory profile enforcement, dependency-policy integration, rollback, and single-step undo.
+- Added executable pass contracts and advanced the Client to `2.2.0-alpha.77`.
+
+# 2.2.0-alpha.76 — Epic E Pass 3 Repair Engine Certification
 
 - Added versioned Repair Engine safety certification with an explicit automatic-action allowlist.
 - Enforced automatic allowlisting, runtime-evidence denial, and destructive/uncertain confirmation at the transaction boundary.

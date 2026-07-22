@@ -236,8 +236,8 @@ Work follows the product dependency chain: runtime evidence → analysis → pro
 
 ### Pass 1: unified workflows
 
-- [ ] command/search/navigation consolidation around canonical application state
-- [ ] bulk profile and library operations with preview and undo
+- [x] command/search/navigation consolidation around canonical application state
+- [x] bulk profile and library operations with preview and undo
 
 ### Pass 2: responsiveness and polish
 

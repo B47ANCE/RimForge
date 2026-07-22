@@ -28,6 +28,8 @@ public partial class ModSorterView : UserControl
     public event RoutedEventHandler? SearchSteamLibrariesRequested;
     public event RoutedEventHandler? OpenSettingsRequested;
     public event EventHandler<ModHealthNavigationRequestedEventArgs>? HealthNavigationRequested;
+    public event RoutedEventHandler? EnableSelectedRequested;
+    public event RoutedEventHandler? DisableSelectedRequested;
 
     public ListBox ActiveList => ActiveModsList;
     public ListBox InactiveList => InactiveModsList;
@@ -191,6 +193,8 @@ public partial class ModSorterView : UserControl
 
     private void SearchSteamLibraries_Click(object sender, RoutedEventArgs e) => SearchSteamLibrariesRequested?.Invoke(this, e);
     private void OpenSettings_Click(object sender, RoutedEventArgs e) => OpenSettingsRequested?.Invoke(this, e);
+    private void EnableSelected_Click(object sender, RoutedEventArgs e) => EnableSelectedRequested?.Invoke(this, e);
+    private void DisableSelected_Click(object sender, RoutedEventArgs e) => DisableSelectedRequested?.Invoke(this, e);
 }
 
 public sealed record ModDragPayload(IReadOnlyList<ProfileLoadOrderItemViewModel> Items, bool FromActive);
