@@ -9,6 +9,7 @@ using RimForge.Companion.Host;
 using RimForge.Protocol.Contracts;
 using RimForge.Protocol.Serialization;
 using System.IO.Pipes;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -959,6 +960,47 @@ try
 finally
 {
     if (Directory.Exists(catalogRoot)) Directory.Delete(catalogRoot, true);
+}
+
+var packageRoot = Path.Combine(Path.GetTempPath(), "rimforge-profile-package-" + Guid.NewGuid().ToString("N"));
+try
+{
+    Directory.CreateDirectory(packageRoot);
+    var packagePath = Path.Combine(packageRoot, "portable.rfprofile.zip");
+    var configBytes = Encoding.UTF8.GetBytes(
+        "<ModsConfigData><version>1.6</version><activeMods><li>ludeon.rimworld</li><li>example.missing</li></activeMods></ModsConfigData>");
+    var packageManifest = new ProfileBackupManifest(
+        "Portable", "1.6", DateTimeOffset.UtcNow,
+        ["ludeon.rimworld", "example.missing"], Array.Empty<string>(),
+        ModsConfigSha256: Convert.ToHexString(SHA256.HashData(configBytes)));
+    using (var archive = ZipFile.Open(packagePath, ZipArchiveMode.Create))
+    {
+        var configEntry = archive.CreateEntry("ModsConfig.xml");
+        await using (var configStream = configEntry.Open()) await configStream.WriteAsync(configBytes);
+        var manifestEntry = archive.CreateEntry("Profile.json");
+        await using var manifestStream = manifestEntry.Open();
+        await JsonSerializer.SerializeAsync(manifestStream, packageManifest);
+    }
+    var packageInspection = await new ProfilePackageInspectionService().InspectAsync(packagePath, [coreMod]);
+    Require(packageInspection.CanImport && packageInspection.MissingPackageIds.SequenceEqual(["example.missing"]),
+        "Portable profile inspection did not report a valid package with missing mods.");
+
+    var invalidPackagePath = Path.Combine(packageRoot, "invalid.rfprofile.zip");
+    using (var archive = ZipFile.Open(invalidPackagePath, ZipArchiveMode.Create))
+    {
+        var configEntry = archive.CreateEntry("ModsConfig.xml");
+        await using (var invalidConfigStream = configEntry.Open()) await invalidConfigStream.WriteAsync(configBytes);
+        var manifestEntry = archive.CreateEntry("Profile.json");
+        await using var invalidManifestStream = manifestEntry.Open();
+        await JsonSerializer.SerializeAsync(invalidManifestStream, packageManifest with { ModsConfigSha256 = "BAD" });
+    }
+    var invalidInspection = await new ProfilePackageInspectionService().InspectAsync(invalidPackagePath, [coreMod]);
+    Require(!invalidInspection.CanImport && invalidInspection.Issues.Any(issue => issue.Contains("checksum", StringComparison.OrdinalIgnoreCase)),
+        "Portable profile inspection accepted a damaged checksum.");
+}
+finally
+{
+    if (Directory.Exists(packageRoot)) Directory.Delete(packageRoot, true);
 }
 
 Console.WriteLine("RimForge.ExecutionTests: PASSED");

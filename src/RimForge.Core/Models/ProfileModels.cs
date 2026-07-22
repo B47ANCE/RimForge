@@ -64,3 +64,15 @@ public sealed record ProfileBackupManifest(
     IReadOnlyList<string> KnownExpansions,
     string ModsConfigFile = "ModsConfig.xml",
     string? ModsConfigSha256 = null);
+
+public sealed record ProfilePackageInspection(
+    bool IsValid,
+    string SourcePath,
+    ProfileBackupManifest? Manifest,
+    IReadOnlyList<string> MissingPackageIds,
+    IReadOnlyList<string> IncompatiblePackageIds,
+    IReadOnlyList<string> Issues)
+{
+    public bool CanImport => IsValid && Manifest is not null;
+    public bool HasCompatibilityWarnings => MissingPackageIds.Count > 0 || IncompatiblePackageIds.Count > 0;
+}

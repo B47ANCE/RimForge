@@ -1,4 +1,19 @@
-# Unreleased — Epic C Pass 4 Durable Profile Catalog State
+# Unreleased — Epic C Pass 5 Verified Profile Portability
+
+## Added
+
+- Added portable profile package inspection before import.
+- Added manifest and ModsConfig checksum, consistency, entry-count, safe-name, and size validation.
+- Added missing-mod and target-version compatibility previews against the installed library.
+- Added main-client rejection messaging for damaged packages and confirmation for compatibility warnings.
+- Added behavioral coverage for valid packages, missing dependencies, and checksum damage.
+
+## Changed
+
+- Registered profile package inspection in canonical application composition.
+- Advanced the client version to `2.2.0-alpha.65`.
+
+# Previous Unreleased — Epic C Pass 4 Durable Profile Catalog State
 
 ## Added
 

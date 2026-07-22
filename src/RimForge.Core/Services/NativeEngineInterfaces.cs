@@ -62,6 +62,14 @@ public interface IProfileCatalogStateStore
     ProfileCatalogState Save(string profilesRoot, ProfileCatalogState state);
 }
 
+public interface IProfilePackageInspectionService
+{
+    Task<ProfilePackageInspection> InspectAsync(
+        string packagePath,
+        IReadOnlyList<ModRecord> installedMods,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IProfileWorkspaceService
 {
     Task<IReadOnlyList<RimForgeProfile>> LoadProfilesAsync(

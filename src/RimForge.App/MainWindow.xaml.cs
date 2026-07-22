@@ -58,6 +58,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly RepairPlanner _repairPlanner = new();
     private readonly IProfileWorkspaceService _profileWorkspaceService;
     private readonly IProfileCatalogStateStore _profileCatalogStateStore;
+    private readonly IProfilePackageInspectionService _profilePackageInspectionService;
     private readonly IExternalProfileReconciliationService _externalProfileReconciliationService;
     private readonly IExternalProfileConflictService _externalProfileConflictService;
     private readonly IModsConfigChangeMonitor _modsConfigChangeMonitor;
@@ -1170,6 +1171,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _nativeForgeRunner = new NativeForgeRunner(_forgeDnaService);
         _profileWorkspaceService = services.ProfileWorkspaceService;
         _profileCatalogStateStore = services.ProfileCatalogStateStore;
+        _profilePackageInspectionService = services.ProfilePackageInspectionService;
         _externalProfileReconciliationService = services.ExternalProfileReconciliationService;
         _externalProfileConflictService = services.ExternalProfileConflictService;
         _modsConfigChangeMonitor = services.ModsConfigChangeMonitor;
@@ -2809,6 +2811,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             Filter = "RimForge profiles (*.rfprofile.zip;*.xml)|*.rfprofile.zip;*.xml|Portable profile backups (*.rfprofile.zip)|*.rfprofile.zip|ModsConfig XML (*.xml)|*.xml|All files (*.*)|*.*"
         };
         if (dialog.ShowDialog(this) != true) return;
+
+        if (dialog.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            var inspection = await _profilePackageInspectionService.InspectAsync(dialog.FileName, Mods.ToList());
+            if (!inspection.CanImport)
+            {
+                var detail = inspection.Issues.FirstOrDefault() ?? "The package could not be verified.";
+                Append("Profile package rejected: " + detail, ActivitySeverity.Error);
+                _notificationService.Enqueue(new NotificationRequest(
+                    "Profile package rejected", detail, NotificationSeverity.Error,
+                    [new NotificationAction("view-activity", "View Details")]));
+                return;
+            }
+
+            if (inspection.HasCompatibilityWarnings)
+            {
+                var warning = $"This profile references {inspection.MissingPackageIds.Count} missing and " +
+                              $"{inspection.IncompatiblePackageIds.Count} version-incompatible mod(s). Import it anyway?";
+                if (!ForgeDialogService.ShowConfirmation(this, "Profile Compatibility Warning", warning, "Import Anyway")) return;
+            }
+        }
 
         var defaultName = Path.GetFileNameWithoutExtension(dialog.FileName);
         var name = PromptForProfileName("Import Profile", defaultName);

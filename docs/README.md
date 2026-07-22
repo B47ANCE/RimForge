@@ -41,6 +41,7 @@ This directory contains current engineering references. Product-level entry poin
 - [`development/EPIC_C_PASS2_ATOMIC_PROFILE_EDITING.md`](development/EPIC_C_PASS2_ATOMIC_PROFILE_EDITING.md) — validated edit drafts, change previews, and stale-write protection
 - [`development/EPIC_C_PASS3_EXTERNAL_PROFILE_CONFLICTS.md`](development/EPIC_C_PASS3_EXTERNAL_PROFILE_CONFLICTS.md) — explicit external profile adoption, restoration, and deferral
 - [`development/EPIC_C_PASS4_DURABLE_PROFILE_CATALOG.md`](development/EPIC_C_PASS4_DURABLE_PROFILE_CATALOG.md) — atomic favorite and lock metadata with legacy migration
+- [`development/EPIC_C_PASS5_VERIFIED_PROFILE_PORTABILITY.md`](development/EPIC_C_PASS5_VERIFIED_PROFILE_PORTABILITY.md) — safe package inspection and compatibility preview before import
 - [`development/FORGE_SESSION_FOUNDATION.md`](development/FORGE_SESSION_FOUNDATION.md) — Forge lifecycle and persistence
 - [`development/PLATFORM_DISCOVERY_FOUNDATION.md`](development/PLATFORM_DISCOVERY_FOUNDATION.md) — Steam, RimWorld, and workspace discovery
 - [`development/COMPANION_HOST_FOUNDATION.md`](development/COMPANION_HOST_FOUNDATION.md) — hidden Companion process and client control surface

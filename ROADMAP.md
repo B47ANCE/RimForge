@@ -110,6 +110,15 @@ RimForge is currently implementing **Epic C — Library and Profiles**. Work bui
 - [x] preservation through profile rename and removal workflows
 - [x] removal of direct profile catalog JSON handling from the UI
 
+### Pass 5: verified profile portability
+
+- [x] pre-import portable package inspection
+- [x] manifest and ModsConfig checksum verification
+- [x] manifest/config load-order consistency validation
+- [x] archive entry count, path, and size safety limits
+- [x] missing and target-version-incompatible mod preview
+- [x] main-client rejection and compatibility-warning workflow
+
 ## Later epics
 
 - **Epic C:** Library and Profiles
