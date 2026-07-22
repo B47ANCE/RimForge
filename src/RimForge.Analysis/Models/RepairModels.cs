@@ -108,3 +108,49 @@ public sealed record RepairHistoryEntry(
     string Result,
     IReadOnlyList<string> Actions,
     string? TechnicalDetail);
+
+public enum RepairTransactionState
+{
+    Planned,
+    Executing,
+    Committed,
+    RollingBack,
+    RolledBack,
+    Cancelled,
+    Failed,
+    RecoveryRequired
+}
+
+public sealed record RepairAuditEvent(
+    DateTimeOffset Timestamp,
+    RepairTransactionState State,
+    string Message,
+    string? TechnicalDetail = null);
+
+public sealed record RepairMutationResult(
+    bool Success,
+    string Message,
+    string? BackupPath = null,
+    string? TechnicalDetail = null);
+
+public sealed record RepairTransactionJournal(
+    string Id,
+    string PlanId,
+    string IssueId,
+    string DeterministicPlanKey,
+    DateTimeOffset StartedAt,
+    DateTimeOffset UpdatedAt,
+    RepairTransactionState State,
+    IReadOnlyList<RepairAuditEvent> AuditTrail,
+    string? BackupPath = null,
+    string? Outcome = null)
+{
+    public bool IsTerminal => State is RepairTransactionState.Committed or RepairTransactionState.RolledBack or
+        RepairTransactionState.Cancelled or RepairTransactionState.Failed;
+}
+
+public sealed record RepairExecutionResult(
+    bool Success,
+    RepairTransactionState State,
+    string Message,
+    RepairTransactionJournal Journal);

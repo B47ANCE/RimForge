@@ -7,6 +7,7 @@ using RimForge.Analysis.Services;
 using RimForge.App.Features.IssueViewer;
 using RimForge.Core.BackgroundTasks;
 using RimForge.Core.Models;
+using RimForge.Core.Services;
 using RimForge.UI.Dialogs;
 
 namespace RimForge.App;
@@ -14,12 +15,23 @@ namespace RimForge.App;
 public partial class MainWindow
 {
     private IssueIgnoreStore? _issueIgnoreStore;
+    private RepairTransactionExecutor? _repairTransactionExecutor;
+    private bool _repairRecoveryInspected;
+    private string _lastRepairOutcomeText = "No repair transaction has run in this session.";
 
     private IssueIgnoreStore IssueIgnoreStore => _issueIgnoreStore ??= new IssueIgnoreStore(
         Path.Combine(RepositoryRoot, "Output", "State", "ignored-issues.json"));
+    private RepairTransactionExecutor RepairTransactionExecutor => _repairTransactionExecutor ??= new RepairTransactionExecutor(
+        Path.Combine(RepositoryRoot, "Output", "State", "repair-transactions"));
+    public string LastRepairOutcomeText
+    {
+        get => _lastRepairOutcomeText;
+        private set { if (_lastRepairOutcomeText == value) return; _lastRepairOutcomeText = value; Notify(nameof(LastRepairOutcomeText)); }
+    }
 
     private void RebuildIssueViewer()
     {
+        InspectInterruptedRepairTransactions();
         if (_analysisSnapshot is null)
         {
             IssueItems.ReplaceAll(Array.Empty<IssueWorkItem>());
@@ -76,42 +88,82 @@ public partial class MainWindow
             return;
         }
         if (issue.RepairAction != RepairActionKind.ReorderProfile || SelectedProfile is null) return;
-        var changed = ApplyOptimizedLoadOrder(false);
-        if (changed)
-        {
-            var profile = SelectedProfile;
-            var activeMods = ActiveProfileMods.Select(item => item.PackageId).ToArray();
-            var result = await RunFeatureTaskAsync(
-                "issue.repair-load-order",
-                "Apply Issue Repair",
-                context =>
+        var profile = SelectedProfile;
+        var proposedOrder = CalculateCanonicalLoadOrder().ToArray();
+        LoadOrderSaveResult? saveResult = null;
+        var execution = await RunFeatureTaskAsync(
+            "issue.repair-transaction",
+            "Apply Transactional Repair",
+            context => RepairTransactionExecutor.ExecuteAsync(
+                plan,
+                async cancellationToken =>
                 {
                     context.Report(new BackgroundTaskProgress(
-                        "Applying issue repair",
+                        "Applying transactional repair",
                         $"Saving the repaired load order for '{profile.Name}'.",
                         profile.ModsConfigPath,
                         null,
                         0,
-                        activeMods.Length,
+                        proposedOrder.Length,
                         issue.Title,
                         profile.ModsConfigPath));
-                    return _profileWorkspaceService.SaveLoadOrderAsync(profile, activeMods, context.CancellationToken);
-                });
-            if (!result.Success || result.UpdatedProfile is null)
-            {
-                Append($"Repair failed: {result.Message}", RimForge.Core.Models.ActivitySeverity.Error);
-                return;
-            }
+                    saveResult = await _profileWorkspaceService.SaveLoadOrderAsync(profile, proposedOrder, cancellationToken);
+                    return new RepairMutationResult(saveResult.Success, saveResult.Message, saveResult.BackupPath);
+                },
+                (_, _) => Task.FromResult(new RepairMutationResult(
+                    true,
+                    "The profile workspace service restored its atomic save backups.")),
+                context.CancellationToken));
+
+        LastRepairOutcomeText = $"{execution.State}: {execution.Message} • Transaction {execution.Journal.Id}";
+        var severity = execution.Success ? NotificationSeverity.Success
+            : execution.State == RepairTransactionState.RecoveryRequired ? NotificationSeverity.Error
+            : NotificationSeverity.Warning;
+        _notificationService.Enqueue(new NotificationRequest(
+            execution.Success ? "Repair committed" : "Repair not applied",
+            LastRepairOutcomeText,
+            severity,
+            [new NotificationAction("view-activity", "View Audit")],
+            TimeSpan.FromSeconds(12)));
+        Append(LastRepairOutcomeText, execution.Success ? ActivitySeverity.Success : ActivitySeverity.Warning);
+
+        if (!execution.Success)
+        {
+            RebuildProfileLoadOrder();
+            return;
+        }
+
+        if (saveResult?.UpdatedProfile is not null)
+        {
             var index = Profiles.IndexOf(SelectedProfile);
-            if (index >= 0) Profiles[index] = result.UpdatedProfile;
+            if (index >= 0) Profiles[index] = saveResult.UpdatedProfile;
             RefreshLibraryProfileWorkspace();
-            SelectedProfile = result.UpdatedProfile;
+            SelectedProfile = saveResult.UpdatedProfile;
             IsLoadOrderDirty = false;
         }
         await RefreshAnalysisSnapshot();
         RebuildModSorter();
         RebuildProfileLoadOrder();
+        ForgeViewFeature.SynchronizeSelection(issue.PackageId, ForgeGraphQueryOrigin.IssueNavigation);
+        Notify(nameof(SelectedProfileReadiness));
+        Notify(nameof(ForgeFocusedProvenanceSummary));
         Append($"Repair completed and shared analysis state refreshed for {issue.ModName}.", RimForge.Core.Models.ActivitySeverity.Success);
+    }
+
+    private void InspectInterruptedRepairTransactions()
+    {
+        if (_repairRecoveryInspected) return;
+        _repairRecoveryInspected = true;
+        var interrupted = RepairTransactionExecutor.DiscoverInterrupted();
+        if (interrupted.Count == 0) return;
+        LastRepairOutcomeText = $"Recovery required for {interrupted.Count} interrupted repair transaction(s). No new repair will reuse their state.";
+        Append(LastRepairOutcomeText, ActivitySeverity.Warning);
+        _notificationService.Enqueue(new NotificationRequest(
+            "Repair recovery required",
+            LastRepairOutcomeText,
+            NotificationSeverity.Warning,
+            [new NotificationAction("view-activity", "View Audit")],
+            TimeSpan.FromSeconds(15)));
     }
 
     private async Task RefreshAnalysisSnapshot()

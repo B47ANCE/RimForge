@@ -1100,6 +1100,62 @@ Require(readyRepair.Evidence.Count == 2 && readyRepair.Preconditions.All(item =>
 Require(readyRepair.DeterministicKey == repeatedRepair.DeterministicKey,
     "Repair planning was not deterministic across equivalent mod input ordering.");
 
+var repairTransactionRoot = Path.Combine(Path.GetTempPath(), $"rimforge-repair-transactions-{Guid.NewGuid():N}");
+try
+{
+    var transactionExecutor = new RepairTransactionExecutor(repairTransactionRoot);
+    var committedRepair = await transactionExecutor.ExecuteAsync(
+        readyRepair,
+        _ => Task.FromResult(new RepairMutationResult(true, "Fixture mutation committed.", "fixture.backup")),
+        (_, _) => Task.FromResult(new RepairMutationResult(true, "Fixture rollback completed.")));
+    Require(committedRepair.Success && committedRepair.State == RepairTransactionState.Committed &&
+            committedRepair.Journal.AuditTrail.Select(item => item.State).SequenceEqual(
+                [RepairTransactionState.Planned, RepairTransactionState.Executing, RepairTransactionState.Committed]),
+        "Repair transaction did not atomically journal its committed lifecycle.");
+    Require(File.Exists(Path.Combine(repairTransactionRoot, committedRepair.Journal.Id + ".json")),
+        "Committed repair transaction did not persist its audit journal.");
+
+    var rollbackCalled = false;
+    var rolledBackRepair = await transactionExecutor.ExecuteAsync(
+        readyRepair,
+        _ => Task.FromResult(new RepairMutationResult(false, "Fixture mutation failed.")),
+        (_, _) => { rollbackCalled = true; return Task.FromResult(new RepairMutationResult(true, "Fixture state restored.")); });
+    Require(!rolledBackRepair.Success && rollbackCalled && rolledBackRepair.State == RepairTransactionState.RolledBack,
+        "Failed repair execution did not invoke rollback and report the restored outcome.");
+
+    using var repairCancellation = new CancellationTokenSource();
+    var cancelledRepair = await transactionExecutor.ExecuteAsync(
+        readyRepair,
+        cancellationToken => { repairCancellation.Cancel(); cancellationToken.ThrowIfCancellationRequested(); return Task.FromResult(new RepairMutationResult(true, "unreachable")); },
+        (_, _) => Task.FromResult(new RepairMutationResult(true, "Cancelled fixture state restored.")),
+        repairCancellation.Token);
+    Require(!cancelledRepair.Success && cancelledRepair.State == RepairTransactionState.Cancelled,
+        "Cancelled repair execution did not roll back to a terminal cancelled state.");
+
+    var interruptedId = "repair-interrupted-fixture";
+    var interruptedAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+    var interruptedJournal = new RepairTransactionJournal(
+        interruptedId, readyRepair.Id, readyRepair.IssueId, readyRepair.DeterministicKey,
+        interruptedAt, interruptedAt, RepairTransactionState.Executing,
+        [new(interruptedAt, RepairTransactionState.Executing, "Fixture process stopped during mutation.")]);
+    Directory.CreateDirectory(repairTransactionRoot);
+    await File.WriteAllTextAsync(
+        Path.Combine(repairTransactionRoot, interruptedId + ".json"),
+        JsonSerializer.Serialize(interruptedJournal));
+    var discovered = transactionExecutor.DiscoverInterrupted();
+    Require(discovered.Count == 1 && discovered[0].State == RepairTransactionState.RecoveryRequired,
+        "Interrupted repair journal was not promoted to recovery-required state.");
+    var recovered = await transactionExecutor.RecoverAsync(
+        interruptedId,
+        (_, _) => Task.FromResult(new RepairMutationResult(true, "Interrupted fixture restored.")));
+    Require(recovered.State == RepairTransactionState.RolledBack && recovered.Journal.IsTerminal,
+        "Interrupted repair recovery did not durably complete rollback.");
+}
+finally
+{
+    if (Directory.Exists(repairTransactionRoot)) Directory.Delete(repairTransactionRoot, true);
+}
+
 Console.WriteLine("RimForge.ExecutionTests: PASSED");
 return;
 

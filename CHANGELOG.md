@@ -1,4 +1,12 @@
-# Unreleased — Epic E Pass 1 Deterministic Repair Planning
+# Unreleased — Epic E Pass 2 Transactional Repair Execution
+
+- Added serialized repair transactions with atomically persisted lifecycle journals and complete audit events.
+- Added failure and cancellation rollback, recovery-required outcomes, interrupted-journal discovery, and explicit recovery execution.
+- Moved canonical load-order persistence inside the transaction boundary and delayed UI profile projection until commit.
+- Added live Issue Viewer, activity, and notification outcomes plus profile-readiness and ForgeView provenance refresh.
+- Added executable commit, rollback, cancellation, interruption, and recovery coverage and advanced the Client to `2.2.0-alpha.75`.
+
+# 2.2.0-alpha.74 — Epic E Pass 1 Deterministic Repair Planning
 
 - Extended immutable repair plans with canonical evidence, confidence, safety classification, no-write previews, deterministic keys, and explicit preconditions.
 - Captured active-profile, lock, workspace, configuration-directory, and installed-mod conditions during read-only planning.

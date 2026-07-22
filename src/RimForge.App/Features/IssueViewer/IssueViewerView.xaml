@@ -21,6 +21,7 @@
             <TextBlock Text="{Binding IssueViewerStatusText}" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}"/>
           </StackPanel>
           <TextBlock Text="Review what is wrong, why it matters, and what RimForge recommends next." Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+          <TextBlock Text="{Binding LastRepairOutcomeText}" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" Margin="0,4,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
           <TextBlock Text="{Binding IssueSearchSummaryText}" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">

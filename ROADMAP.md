@@ -222,9 +222,9 @@ Work follows the product dependency chain: runtime evidence → analysis → pro
 
 ### Pass 2: transactional execution and recovery
 
-- [ ] atomic execution, rollback, cancellation, and interrupted-session recovery
-- [ ] complete audit trail and user-visible outcome reporting
-- [ ] integration with profile readiness and ForgeView provenance
+- [x] atomic execution, rollback, cancellation, and interrupted-session recovery
+- [x] complete audit trail and user-visible outcome reporting
+- [x] integration with profile readiness and ForgeView provenance
 
 ### Pass 3: repair certification
 
