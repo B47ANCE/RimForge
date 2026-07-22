@@ -863,6 +863,46 @@ finally
         Directory.Delete(incrementalRepositoryRoot, recursive: true);
 }
 
+var libraryProjection = new LibraryProfileProjectionService();
+var projectionProfile = new RimForgeProfile(
+    "Projection Profile",
+    "workspace",
+    "ModsConfig.xml",
+    ["example.analysis.alpha", "example.missing", "example.duplicate"],
+    Array.Empty<string>(),
+    "1.6",
+    false,
+    false);
+var duplicateOne = new ModRecord
+{
+    Id = "duplicate-one", PackageId = "example.duplicate", Name = "Duplicate One",
+    FolderName = "DuplicateOne", RootPath = "duplicate/a", AboutPath = "duplicate/a/About/About.xml"
+};
+var duplicateTwo = new ModRecord
+{
+    Id = "duplicate-two", PackageId = "EXAMPLE.DUPLICATE", Name = "Duplicate Two",
+    FolderName = "DuplicateTwo", RootPath = "duplicate/b", AboutPath = "duplicate/b/About/About.xml"
+};
+var projectedWorkspace = libraryProjection.Create(
+    [duplicateTwo, analysisBeta, analysisAlpha, duplicateOne],
+    [projectionProfile],
+    DateTimeOffset.UnixEpoch);
+var projectedWorkspaceReordered = libraryProjection.Create(
+    [analysisAlpha, duplicateOne, duplicateTwo, analysisBeta],
+    [projectionProfile],
+    DateTimeOffset.UtcNow);
+var projectedProfile = projectedWorkspace.FindProfile("projection profile");
+Require(projectedProfile is not null, "Library/profile projection lookup was not case insensitive.");
+Require(projectedProfile!.InstalledCount == 1 && projectedProfile.MissingCount == 1 && projectedProfile.AmbiguousCount == 1,
+    "Library/profile projection did not classify installed, missing, and ambiguous references.");
+Require(projectedProfile.InactiveInstalledMods.Count == 1 &&
+        projectedProfile.InactiveInstalledMods[0].PackageId == "example.analysis.beta",
+    "Library/profile projection did not expose the inactive installed inventory.");
+Require(projectedWorkspace.DuplicatePackageIds.SequenceEqual(["example.duplicate"], StringComparer.OrdinalIgnoreCase),
+    "Library/profile projection did not publish duplicate package IDs.");
+Require(projectedWorkspace.Fingerprint == projectedWorkspaceReordered.Fingerprint,
+    "Library/profile projection fingerprint depended on discovery order or generation time.");
+
 Console.WriteLine("RimForge.ExecutionTests: PASSED");
 return;
 

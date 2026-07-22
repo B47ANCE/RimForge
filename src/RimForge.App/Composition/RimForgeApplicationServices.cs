@@ -27,6 +27,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
         IStatePreservationService statePreservationService,
         ISignedUpdateService signedUpdateService,
         IModLibraryService modLibraryService,
+        ILibraryProfileProjectionService libraryProfileProjectionService,
         IModAnalysisEngine analysisEngine,
         IForgeEvidenceService forgeEvidenceService,
         IForgeEvidenceBus forgeEvidenceBus,
@@ -71,6 +72,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
         StatePreservationService = statePreservationService;
         SignedUpdateService = signedUpdateService;
         ModLibraryService = modLibraryService;
+        LibraryProfileProjectionService = libraryProfileProjectionService;
         AnalysisEngine = analysisEngine;
         ForgeEvidenceService = forgeEvidenceService;
         ForgeEvidenceBus = forgeEvidenceBus;
@@ -116,6 +118,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
     public IStatePreservationService StatePreservationService { get; }
     public ISignedUpdateService SignedUpdateService { get; }
     public IModLibraryService ModLibraryService { get; }
+    public ILibraryProfileProjectionService LibraryProfileProjectionService { get; }
     public IModAnalysisEngine AnalysisEngine { get; }
     public IForgeEvidenceService ForgeEvidenceService { get; }
     public IForgeEvidenceBus ForgeEvidenceBus { get; }
@@ -213,6 +216,7 @@ public sealed class RimForgeApplicationServices : IAsyncDisposable
                 aboutXmlParser,
                 dependencyGraphService,
                 steamLibraryDiscoveryService),
+            new LibraryProfileProjectionService(),
             analysisEngine,
             forgeEvidenceService,
             forgeEvidenceBus,

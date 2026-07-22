@@ -1,6 +1,6 @@
 # RimForge Roadmap
 
-RimForge is currently implementing **Epic B — Analysis Engine**. Work builds on the existing application; completed systems are improved rather than replaced.
+RimForge is currently implementing **Epic C — Library and Profiles**. Work builds on the existing application; completed systems are improved rather than replaced.
 
 ## Epic A — Platform Foundation and Runtime Infrastructure
 
@@ -72,6 +72,17 @@ RimForge is currently implementing **Epic B — Analysis Engine**. Work builds o
 - [x] non-mandatory observed-conflict relationships between installed mods
 - [x] Forge DNA and main-client analysis wired to the current evidence generation
 - [x] removal of parallel runtime and Forge Evidence issue interpretation from the UI
+
+## Epic C — Library and Profiles
+
+### Pass 1: canonical library/profile projection
+
+- [x] deterministic installed-library inventory independent of discovery order
+- [x] canonical profile-to-library reconciliation
+- [x] installed, missing, and ambiguous active-mod resolution
+- [x] inactive installed inventory per profile
+- [x] case-insensitive profile lookup and duplicate package-ID reporting
+- [x] stable workspace fingerprint for downstream refresh and caching
 
 ## Later epics
 

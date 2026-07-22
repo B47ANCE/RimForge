@@ -1,4 +1,19 @@
-# Unreleased — Three-Repository Ownership Correction
+# Unreleased — Epic C Pass 1 Library/Profile Projection
+
+## Added
+
+- Added a canonical, deterministic projection joining the full installed library with every RimForge profile.
+- Added explicit installed, missing, and ambiguous resolution for active profile entries.
+- Added per-profile inactive installed inventory, duplicate package-ID reporting, and case-insensitive lookup.
+- Added a stable workspace fingerprint independent of discovery order and observation time.
+- Added execution and static acceptance coverage for the Epic C foundation.
+
+## Changed
+
+- Registered the library/profile projection in canonical application composition.
+- Advanced the client version to `2.2.0-alpha.61`.
+
+# Previous Unreleased — Three-Repository Ownership Correction
 
 ## Changed
 

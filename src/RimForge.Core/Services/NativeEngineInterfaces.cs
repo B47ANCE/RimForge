@@ -35,6 +35,14 @@ public interface IModLibraryService
         CancellationToken cancellationToken = default);
 }
 
+public interface ILibraryProfileProjectionService
+{
+    LibraryProfileWorkspaceSnapshot Create(
+        IReadOnlyList<ModRecord> installedMods,
+        IReadOnlyList<RimForgeProfile> profiles,
+        DateTimeOffset? generatedUtc = null);
+}
+
 public interface IProfileWorkspaceService
 {
     Task<IReadOnlyList<RimForgeProfile>> LoadProfilesAsync(
